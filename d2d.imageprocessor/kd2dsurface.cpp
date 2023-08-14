@@ -130,6 +130,8 @@ void KD2DSurface::create_device_dependent_resources()
 void KD2DSurface::discard_device_dependent_resources()
 {
     discard_bitmap_resources();
+    d2d_dxgi_bitmap_->Release();
+    d2d_device_context_->Release();
     dxgi_swap_chain_->Release();
     d3d_device_->Release();
     discard_wic_resources();
@@ -212,7 +214,6 @@ void KD2DSurface::render()
     hr = dxgi_swap_chain_->Present(1, 0);
     if (hr == DXGI_ERROR_DEVICE_REMOVED || hr == DXGI_ERROR_DEVICE_RESET)
     {
-        discard_render_target_resources();
         discard_device_dependent_resources();
         device_lost_ = true;
         return;
