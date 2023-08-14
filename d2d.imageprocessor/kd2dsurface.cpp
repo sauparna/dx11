@@ -49,44 +49,7 @@ void KD2DSurface::create_device_independent_resources()
 {
     HRESULT hr = D2D1CreateFactory(D2D1_FACTORY_TYPE_SINGLE_THREADED, &d2d_factory_);
     assert(SUCCEEDED(hr));
-
-    ///////////////////////////////////////////////////////////////////////////////////////////
-    // Create WIC resources to read/write image data.
-    ///////////////////////////////////////////////////////////////////////////////////////////
-
-    hr = CoCreateInstance(CLSID_WICImagingFactory2,
-                          nullptr,
-                          CLSCTX_INPROC_SERVER,
-                          IID_PPV_ARGS(&wic_factory_));
-    assert(SUCCEEDED(hr));
-
-    IWICBitmapDecoder *decoder{};
-    hr = wic_factory_->CreateDecoderFromFilename(img_filename_.c_str(),
-                                                 nullptr,
-                                                 GENERIC_READ,
-                                                 WICDecodeMetadataCacheOnDemand,
-                                                 &decoder);
-    assert(SUCCEEDED(hr));
-    IWICBitmapFrameDecode *frame{};
-    hr = decoder->GetFrame(0, &frame);
-    assert(SUCCEEDED(hr));
-    hr = wic_factory_->CreateFormatConverter(&wic_converter_);
-    assert(SUCCEEDED(hr));
-    hr = wic_converter_->Initialize(frame,
-                                    GUID_WICPixelFormat32bppPBGRA,
-                                    WICBitmapDitherTypeNone,
-                                    nullptr,
-                                    0.0f,
-                                    WICBitmapPaletteTypeCustom);
-    assert(SUCCEEDED(hr));
-    // hr = wic_factory_->CreateBitmap(100, 100,
-    //                                      GUID_WICPixelFormat32bppBGR,
-    //                                      WICBitmapCacheOnLoad,
-    //                                      &wic_bitmap_);
-    // assert(SUCCEEDED(hr));
-    wic_converter_->GetSize(&bitmap_width_, &bitmap_height_);
-    // hr = wic_converter_->GetResolution(&dpix, &dpiy);
-    // assert(SUCCEEDED(hr));
+    create_wic_resources();
 }
 
 void KD2DSurface::create_device_dependent_resources()
@@ -161,73 +124,17 @@ void KD2DSurface::create_device_dependent_resources()
     // Create the rest of the Direct2D device-dependent resources.
     ///////////////////////////////////////////////////////////////////////////////////////////
 
-    hr = wic_factory_->CreateBitmapFromSource(wic_converter_,
-                                              WICBitmapCacheOnLoad,
-                                              &wic_bitmap_);
-    assert(SUCCEEDED(hr));
-
-    modify_wic_bitmap_memory();
-
-    D2D1_BITMAP_PROPERTIES1 d2d_bitmap_prop = D2D1::BitmapProperties1(
-        D2D1_BITMAP_OPTIONS_CPU_READ | D2D1_BITMAP_OPTIONS_CANNOT_DRAW,
-        D2D1::PixelFormat(DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_PREMULTIPLIED),
-        96.0f, 96.0f);
-
-    hr = d2d_device_context_->CreateBitmapFromWicBitmap(wic_bitmap_,
-                                                        &d2d_bitmap_prop,
-                                                        &d2d_bitmap_);
-    assert(SUCCEEDED(hr));
-    modify_d2d_bitmap_memory();
-}
-
-void KD2DSurface::modify_wic_bitmap_memory()
-{
-    HRESULT hr = S_OK;
-
-    WICRect lockedRect{0, 0,
-                       static_cast<INT>(bitmap_width_),
-                       static_cast<INT>(bitmap_height_)};
-    IWICBitmapLock *lock{};
-    hr = wic_bitmap_->Lock(&lockedRect, WICBitmapLockWrite, &lock);
-    assert(SUCCEEDED(hr));
-
-    UINT stride{};
-    hr = lock->GetStride(&stride);
-    assert(SUCCEEDED(hr));
-    
-    UINT sz{};
-    BYTE *mem{};
-    hr = lock->GetDataPointer(&sz, &mem);
-    assert(SUCCEEDED(hr));
-
-    ZeroMemory(mem, sz/4);
-    lock->Release();
-}
-
-void KD2DSurface::modify_d2d_bitmap_memory()
-{
-    HRESULT hr = S_OK;
-
-    D2D1_MAPPED_RECT d2d1_mapped_rect{};
-    hr = d2d_bitmap_->Map(D2D1_MAP_OPTIONS_READ, &d2d1_mapped_rect);
-    assert(SUCCEEDED(hr));
-
-    ZeroMemory(d2d1_mapped_rect.bits, d2d1_mapped_rect.pitch * (bitmap_height_ - 64));
-
-    hr = d2d_bitmap_->Unmap();
-    assert(SUCCEEDED(hr));
+    create_bitmap_resources();
 }
 
 void KD2DSurface::discard_device_dependent_resources()
 {
-    wic_bitmap_->Release();
-    d2d_bitmap_->Release();
+    discard_bitmap_resources();
     d2d_dxgi_bitmap_->Release();
     d2d_device_context_->Release();
     dxgi_swap_chain_->Release();
     d3d_device_->Release();
-    wic_converter_->Release();
-    wic_factory_->Release();
+    discard_wic_resources();
 }
 
 void KD2DSurface::create_render_target_resources()
@@ -287,7 +194,7 @@ void KD2DSurface::render()
     ///////////////////////////////////////////////////////////////////////////////////////////
 
     ///////////////////////////////////////////////////////////////////////////////////////////
-    // Use Direct2D to draw onto the render target.
+    // Use Direct2D to draw the bitmap on the render target.
     ///////////////////////////////////////////////////////////////////////////////////////////
     // d2d_device_context_->BeginDraw();
     // d2d_device_context_->DrawBitmap(d2d_bitmap_,
@@ -312,6 +219,120 @@ void KD2DSurface::render()
         return;
     }
     assert(SUCCEEDED(hr));
+}
+
+void KD2DSurface::create_wic_resources()
+{
+    HRESULT hr = S_OK;
+
+    ///////////////////////////////////////////////////////////////////////////////////////////
+    // Create WIC resources to read/write image data.
+    ///////////////////////////////////////////////////////////////////////////////////////////
+
+    hr = CoCreateInstance(CLSID_WICImagingFactory2,
+                          nullptr,
+                          CLSCTX_INPROC_SERVER,
+                          IID_PPV_ARGS(&wic_factory_));
+    assert(SUCCEEDED(hr));
+
+    IWICBitmapDecoder *decoder{};
+    hr = wic_factory_->CreateDecoderFromFilename(img_filename_.c_str(),
+                                                 nullptr,
+                                                 GENERIC_READ,
+                                                 WICDecodeMetadataCacheOnDemand,
+                                                 &decoder);
+    assert(SUCCEEDED(hr));
+    IWICBitmapFrameDecode *frame{};
+    hr = decoder->GetFrame(0, &frame);
+    assert(SUCCEEDED(hr));
+    hr = wic_factory_->CreateFormatConverter(&wic_converter_);
+    assert(SUCCEEDED(hr));
+    hr = wic_converter_->Initialize(frame,
+                                    GUID_WICPixelFormat32bppPBGRA,
+                                    WICBitmapDitherTypeNone,
+                                    nullptr,
+                                    0.0f,
+                                    WICBitmapPaletteTypeCustom);
+    assert(SUCCEEDED(hr));
+    wic_converter_->GetSize(&bitmap_width_, &bitmap_height_);
+    // hr = wic_converter_->GetResolution(&dpix, &dpiy);
+    // assert(SUCCEEDED(hr));
+}
+
+void KD2DSurface::discard_wic_resources()
+{
+    wic_converter_->Release();
+    wic_factory_->Release();
+}
+
+void KD2DSurface::create_bitmap_resources()
+{
+    HRESULT hr = S_OK;
+
+    ///////////////////////////////////////////////////////////////////////////////////////////
+    // Create a WIC bitmap and write to bitmap memory.
+    ///////////////////////////////////////////////////////////////////////////////////////////
+
+    hr = wic_factory_->CreateBitmapFromSource(wic_converter_,
+                                              WICBitmapCacheOnLoad,
+                                              &wic_bitmap_);
+    assert(SUCCEEDED(hr));
+    WICRect lockedRect{0, 0,
+                       static_cast<INT>(bitmap_width_),
+                       static_cast<INT>(bitmap_height_)};
+    IWICBitmapLock *lock{};
+    hr = wic_bitmap_->Lock(&lockedRect, WICBitmapLockWrite, &lock);
+    assert(SUCCEEDED(hr));
+
+    UINT stride{};
+    hr = lock->GetStride(&stride);
+    assert(SUCCEEDED(hr));
+    
+    UINT sz{};
+    BYTE *mem{};
+    hr = lock->GetDataPointer(&sz, &mem);
+    assert(SUCCEEDED(hr));
+
+    ZeroMemory(mem, sz/4);
+    lock->Release();
+
+    ///////////////////////////////////////////////////////////////////////////////////////////
+    // Create D2D bitmap from WIC bitmap and write to that bitmap's memory.
+    ///////////////////////////////////////////////////////////////////////////////////////////
+    
+    D2D1_BITMAP_PROPERTIES1 d2d_bitmap_prop = D2D1::BitmapProperties1(
+        D2D1_BITMAP_OPTIONS_CPU_READ | D2D1_BITMAP_OPTIONS_CANNOT_DRAW,
+        D2D1::PixelFormat(DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_PREMULTIPLIED),
+        96.0f, 96.0f);
+
+    hr = d2d_device_context_->CreateBitmapFromWicBitmap(wic_bitmap_,
+                                                        &d2d_bitmap_prop,
+                                                        &d2d_bitmap_);
+    assert(SUCCEEDED(hr));
+
+    D2D1_MAPPED_RECT d2d1_mapped_rect{};
+    hr = d2d_bitmap_->Map(D2D1_MAP_OPTIONS_READ, &d2d1_mapped_rect);
+    assert(SUCCEEDED(hr));
+
+    ZeroMemory(d2d1_mapped_rect.bits, d2d1_mapped_rect.pitch * (bitmap_height_ - 64));
+
+    hr = d2d_bitmap_->Unmap();
+    assert(SUCCEEDED(hr));
+
+    ///////////////////////////////////////////////////////////////////////////////////////////
+    // REWRITE: Another bitmap is probably needed to write the image to a file on disk.
+    ///////////////////////////////////////////////////////////////////////////////////////////
+    // hr = wic_factory_->CreateBitmap(100, 100,
+    //                                      GUID_WICPixelFormat32bppBGR,
+    //                                      WICBitmapCacheOnLoad,
+    //                                      &wic_bitmap_);
+    // assert(SUCCEEDED(hr));    
+}
+
+void KD2DSurface::discard_bitmap_resources()
+{
+    wic_bitmap_->Release();
+    d2d_bitmap_->Release();
 }
 
 D2D1_SIZE_U KD2DSurface::surface_size() const

@@ -12,6 +12,10 @@ public:
     void discard_device_dependent_resources();
     void create_render_target_resources();
     void discard_render_target_resources();
+    void create_wic_resources();
+    void discard_wic_resources();
+    void create_bitmap_resources();
+    void discard_bitmap_resources();
     void resize();
     void render();
     HRESULT d3d_create_device(D3D_DRIVER_TYPE const driver_type, ID3D11Device *&d3d_device);
