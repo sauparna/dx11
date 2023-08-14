@@ -12,7 +12,12 @@ KD2DSurface::KD2DSurface(HWND hwnd, D2D1_SIZE_U sz)
     create_render_target_resources();
 }
 
-KD2DSurface::~KD2DSurface() {}
+KD2DSurface::~KD2DSurface()
+{
+    discard_device_dependent_resources();
+    discard_wic_resources();
+    d2d_factory_->Release();
+}
 
 HRESULT KD2DSurface::d3d_create_device(D3D_DRIVER_TYPE const driver_type, ID3D11Device *&d3d_device)
 {
@@ -134,7 +139,6 @@ void KD2DSurface::discard_device_dependent_resources()
     d2d_device_context_->Release();
     dxgi_swap_chain_->Release();
     d3d_device_->Release();
-    discard_wic_resources();
 }
 
 void KD2DSurface::create_render_target_resources()
