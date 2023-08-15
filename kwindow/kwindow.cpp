@@ -1,4 +1,4 @@
-#include "kgraphics.h"
+//#include "kgraphics.h"
 #include "kwindow.h"
 
 KWindow::KWindow() { }
