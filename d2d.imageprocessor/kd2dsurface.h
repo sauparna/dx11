@@ -8,6 +8,7 @@ public:
     KD2DSurface(HWND hwnd, D2D1_SIZE_U sz);
     ~KD2DSurface();
     void create_device_independent_resources();
+    void discard_device_independent_resources();
     void create_device_dependent_resources();
     void discard_device_dependent_resources();
     void create_render_target_resources();
@@ -37,9 +38,6 @@ protected:
     std::wstring img_filename_{L"tintin_on_train.jpg"};
     unsigned bitmap_width_{};
     unsigned bitmap_height_{};
-
-    void modify_wic_bitmap_memory();
-    void modify_d2d_bitmap_memory();
 
     HWND hwnd_{};
     D2D1_SIZE_U surface_size_{};

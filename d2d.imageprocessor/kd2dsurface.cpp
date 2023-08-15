@@ -15,8 +15,7 @@ KD2DSurface::KD2DSurface(HWND hwnd, D2D1_SIZE_U sz)
 KD2DSurface::~KD2DSurface()
 {
     discard_device_dependent_resources();
-    discard_wic_resources();
-    d2d_factory_->Release();
+    discard_device_independent_resources();
 }
 
 HRESULT KD2DSurface::d3d_create_device(D3D_DRIVER_TYPE const driver_type, ID3D11Device *&d3d_device)
@@ -55,6 +54,12 @@ void KD2DSurface::create_device_independent_resources()
     HRESULT hr = D2D1CreateFactory(D2D1_FACTORY_TYPE_SINGLE_THREADED, &d2d_factory_);
     assert(SUCCEEDED(hr));
     create_wic_resources();
+}
+
+void KD2DSurface::discard_device_independent_resources()
+{
+    discard_wic_resources();
+    d2d_factory_->Release();
 }
 
 void KD2DSurface::create_device_dependent_resources()
