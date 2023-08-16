@@ -2,6 +2,10 @@
 *~
 \#*\#
 
+# Windows debug build files
+*.pdb
+*.map
+
 # Prerequisites
 *.d
 
