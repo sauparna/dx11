@@ -2,6 +2,7 @@
 #include <cassert>
 #include "kmath.h"
 #include "kd3dsurface.h"
+#include "kobjloader.h"
 
 KD3DSurface::KD3DSurface(HWND hwnd, int width, int height)
     : hwnd_{hwnd}, surface_width_{width}, surface_height_{height}
@@ -278,56 +279,82 @@ void KD3DSurface::build_geometry()
     ///////////////////////////////////////////////////////////////////////////////////////////
     // cube: x, y, z
     ///////////////////////////////////////////////////////////////////////////////////////////
-    float kVertexData[]{ -0.5f, -0.5f, -0.5f,
-                         -0.5f, -0.5f,  0.5f,
-                         -0.5f,  0.5f, -0.5f,
-                         -0.5f,  0.5f,  0.5f,
-                          0.5f, -0.5f, -0.5f,
-                          0.5f, -0.5f,  0.5f,
-                          0.5f,  0.5f, -0.5f,
-                          0.5f,  0.5f,  0.5f};
-    stride_ = 3 * sizeof(float);
-    nvertex_ = sizeof(kVertexData) / stride_;
+    // float kVertexData[]{ -0.5f, -0.5f, -0.5f,
+    //                      -0.5f, -0.5f,  0.5f,
+    //                      -0.5f,  0.5f, -0.5f,
+    //                      -0.5f,  0.5f,  0.5f,
+    //                       0.5f, -0.5f, -0.5f,
+    //                       0.5f, -0.5f,  0.5f,
+    //                       0.5f,  0.5f, -0.5f,
+    //                       0.5f,  0.5f,  0.5f};
+    // stride_ = 3 * sizeof(float);
+    // nvertex_ = sizeof(kVertexData) / stride_;
+    // offset_ = 0;
+    ///////////////////////////////////////////////////////////////////////////////////////////
+
+    // D3D11_BUFFER_DESC d3d11_vertex_buffer_desc{};
+    // d3d11_vertex_buffer_desc.ByteWidth = sizeof(kVertexData);
+    // d3d11_vertex_buffer_desc.Usage = D3D11_USAGE_IMMUTABLE;
+    // d3d11_vertex_buffer_desc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+
+    // D3D11_SUBRESOURCE_DATA d3d11_vertex_subresource_data{kVertexData};
+    
+    ///////////////////////////////////////////////////////////////////////////////////////////
+    // Read in OBJ data.
+    ///////////////////////////////////////////////////////////////////////////////////////////
+    KOBJBlob objb = load_obj("3dmodel.obj");
+    stride_ = sizeof(VertexData);
+    // nvertex_ = objb.numVertices;
     offset_ = 0;
+    nindex_ = objb.numIndices;
     ///////////////////////////////////////////////////////////////////////////////////////////
 
     D3D11_BUFFER_DESC d3d11_vertex_buffer_desc{};
-    d3d11_vertex_buffer_desc.ByteWidth = sizeof(kVertexData);
+    d3d11_vertex_buffer_desc.ByteWidth = objb.numVertices * sizeof(VertexData);
     d3d11_vertex_buffer_desc.Usage = D3D11_USAGE_IMMUTABLE;
     d3d11_vertex_buffer_desc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
 
-    D3D11_SUBRESOURCE_DATA d3d11_vertex_subresource_data{kVertexData};
+    D3D11_SUBRESOURCE_DATA d3d11_vertex_subresource_data{objb.vertexBuffer};
 
     HRESULT hr = d3d11_device_->CreateBuffer(&d3d11_vertex_buffer_desc,
                                              &d3d11_vertex_subresource_data,
                                              &vertex_buffer_);
     assert(SUCCEEDED(hr));
 
-    uint16_t kIndexData[]{0, 6, 4,
-                          0, 2, 6, 
-                          0, 3, 2,
-                          0, 1, 3,
-                          2, 7, 6,
-                          2, 3, 7,
-                          4, 6, 7,
-                          4, 7, 5,
-                          0, 4, 5,
-                          0, 5, 1,
-                          1, 5, 7, 
-                          1, 7, 3};
-    nindex_ = sizeof(kIndexData) / sizeof(kIndexData[0]);
+    // uint16_t kIndexData[]{0, 6, 4,
+    //                       0, 2, 6, 
+    //                       0, 3, 2,
+    //                       0, 1, 3,
+    //                       2, 7, 6,
+    //                       2, 3, 7,
+    //                       4, 6, 7,
+    //                       4, 7, 5,
+    //                       0, 4, 5,
+    //                       0, 5, 1,
+    //                       1, 5, 7, 
+    //                       1, 7, 3};
+    // nindex_ = sizeof(kIndexData) / sizeof(kIndexData[0]);
     
+    // D3D11_BUFFER_DESC d3d11_index_buffer_desc{};
+    // d3d11_index_buffer_desc.ByteWidth = sizeof(kIndexData);
+    // d3d11_index_buffer_desc.Usage = D3D11_USAGE_IMMUTABLE;
+    // d3d11_index_buffer_desc.BindFlags = D3D11_BIND_INDEX_BUFFER;
+
+    // D3D11_SUBRESOURCE_DATA d3d11_index_subresource_data{kIndexData};
+
     D3D11_BUFFER_DESC d3d11_index_buffer_desc{};
-    d3d11_index_buffer_desc.ByteWidth = sizeof(kIndexData);
+    d3d11_index_buffer_desc.ByteWidth = objb.numIndices * sizeof(uint16_t);
     d3d11_index_buffer_desc.Usage = D3D11_USAGE_IMMUTABLE;
     d3d11_index_buffer_desc.BindFlags = D3D11_BIND_INDEX_BUFFER;
 
-    D3D11_SUBRESOURCE_DATA d3d11_index_subresource_data{kIndexData};
-
+    D3D11_SUBRESOURCE_DATA d3d11_index_subresource_data{objb.indexBuffer};
+    
     hr = d3d11_device_->CreateBuffer(&d3d11_index_buffer_desc,
                                      &d3d11_index_subresource_data,
                                      &index_buffer_);
     assert(SUCCEEDED(hr));
+    
+    free_obj(objb);
 }
 
 void KD3DSurface::create_constant_buffer()
