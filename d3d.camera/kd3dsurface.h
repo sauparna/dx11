@@ -49,10 +49,14 @@ public:
     KCamera camera_{};
 
 protected:
+
+    void enable_d3d_debugging(ID3D11Device1 **d3d11_device);
+
     ID3D11Device1 *d3d11_device_{};
     ID3D11DeviceContext1* d3d11_device_context_{};
     IDXGISwapChain1 *dxgi_swap_chain_{};
     ID3D11RenderTargetView *d3d11_frame_buffer_view_{};
+    ID3D11DepthStencilView *d3d11_depth_buffer_view_{};
 
     ID3DBlob *vs_blob_{};
     ID3D11VertexShader *vertex_shader_;
@@ -94,10 +98,13 @@ protected:
     unsigned bitmap_width_{};
     unsigned bitmap_height_{};
 
+    UINT d3d11_runtime_layers_{D3D11_CREATE_DEVICE_BGRA_SUPPORT};
+    UINT d3d11_shader_compile_options_{0};
+
     HWND hwnd_{};
     int surface_width_{1};
     int surface_height_{1};
-    float surface_aspect_ratio_{1.0f};
+    float surface_aspect_ratio_{1.0f};    
 };
 
 template <typename T>
