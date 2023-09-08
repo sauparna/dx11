@@ -37,9 +37,12 @@ public:
                               ID3D11Device1 **d3d11_device,
                               ID3D11DeviceContext1 **d3d11_device_context);
     bool device_lost_{false};
-    bool window_resized_{false};
+    bool window_resized_{true};
 
 protected:
+
+    void enable_d3d_debugging(ID3D11Device1 **d3d11_device);
+    
     ID3D11Device1 *d3d11_device_{};
     ID3D11DeviceContext1* d3d11_device_context_{};
     IDXGISwapChain1 *dxgi_swap_chain_{};
@@ -68,6 +71,9 @@ protected:
     unsigned bitmap_width_{};
     unsigned bitmap_height_{};
 
+    UINT d3d11_runtime_layers_{D3D11_CREATE_DEVICE_BGRA_SUPPORT};
+    UINT d3d11_shader_compile_options_{0};
+    
     HWND hwnd_{};
     int surface_width_{1};
     int surface_height_{1};

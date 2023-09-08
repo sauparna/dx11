@@ -8,12 +8,40 @@ KD3DSurface::KD3DSurface(HWND hwnd, int width, int height)
     create_device_independent_resources();
     create_device_dependent_resources();
     create_render_target_resources();
+
+#if defined(DEBUG_BUILD)
+    enable_d3d_debugging(&d3d11_device_);
+#endif    
 }
 
 KD3DSurface::~KD3DSurface()
 {
     discard_device_dependent_resources();
     discard_device_independent_resources();
+}
+
+void KD3DSurface::enable_d3d_debugging(ID3D11Device1 **d3d11_device)
+{
+    if (*d3d11_device == nullptr) return;
+    
+    ID3D11Debug *d3d_debug = nullptr;
+    (*d3d11_device)->QueryInterface(__uuidof(ID3D11Debug),
+                                    reinterpret_cast<void**>(&d3d_debug));
+    if (d3d_debug)
+    {
+        ID3D11InfoQueue *d3dInfoQueue = nullptr;
+        if (SUCCEEDED(d3d_debug->QueryInterface(__uuidof(ID3D11InfoQueue),
+                                                reinterpret_cast<void**>(&d3dInfoQueue))))
+        {
+            d3dInfoQueue->SetBreakOnSeverity(D3D11_MESSAGE_SEVERITY_CORRUPTION, true);
+            d3dInfoQueue->SetBreakOnSeverity(D3D11_MESSAGE_SEVERITY_ERROR, true);
+            d3dInfoQueue->Release();
+        }
+        d3d_debug->Release();
+    }
+
+    d3d11_runtime_layers_ |= D3D11_CREATE_DEVICE_DEBUG;
+    d3d11_shader_compile_options_ |= D3DCOMPILE_DEBUG;    // Enable shader-debugging in Visual Studio.
 }
 
 void KD3DSurface::create_device_independent_resources()
@@ -139,26 +167,39 @@ void KD3DSurface::discard_render_target_resources()
 void KD3DSurface::create_vertex_shader()
 {
     ID3DBlob *shader_compiler_error_blob = nullptr;
-    HRESULT hr = D3DCompileFromFile(L"shaders.hlsl", nullptr, nullptr,
-                                    "vs_main", "vs_5_0", 0, 0,
-                                    &vs_blob_, &shader_compiler_error_blob);
+    HRESULT hr = D3DCompileFromFile(L"shaders.hlsl",
+                                    nullptr,
+                                    nullptr,
+                                    "vs_main",
+                                    "vs_5_0",
+                                    d3d11_shader_compile_options_,
+                                    0,
+                                    &vs_blob_,
+                                    &shader_compiler_error_blob);
     assert(shader_compiler_succeeded(hr, shader_compiler_error_blob));
     hr = d3d11_device_->CreateVertexShader(vs_blob_->GetBufferPointer(),
                                            vs_blob_->GetBufferSize(),
-                                           nullptr, &vertex_shader_);
+                                           nullptr,
+                                           &vertex_shader_);
     assert(SUCCEEDED(hr));
 }
 
 void KD3DSurface::create_pixel_shader()
 {
     ID3DBlob *shader_compiler_error_blob = nullptr;
-    HRESULT hr = D3DCompileFromFile(L"shaders.hlsl", nullptr, nullptr,
-                                    "ps_main", "ps_5_0", 0, 0,
+    HRESULT hr = D3DCompileFromFile(L"shaders.hlsl",
+                                    nullptr,
+                                    nullptr,
+                                    "ps_main",
+                                    "ps_5_0",
+                                    d3d11_shader_compile_options_,
+                                    0,
                                     &ps_blob_, &shader_compiler_error_blob);
     assert(shader_compiler_succeeded(hr, shader_compiler_error_blob));
     hr = d3d11_device_->CreatePixelShader(ps_blob_->GetBufferPointer(),
                                           ps_blob_->GetBufferSize(),
-                                          nullptr, &pixel_shader_);
+                                          nullptr,
+                                          &pixel_shader_);
     assert(SUCCEEDED(hr));
 }
 
@@ -189,18 +230,20 @@ void KD3DSurface::create_input_layout()
             { "POS", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
             { "TEX", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 }
         };
-    HRESULT hr = d3d11_device_->CreateInputLayout(kInputElementDesc, ARRAYSIZE(kInputElementDesc),
-                                                  vs_blob_->GetBufferPointer(), vs_blob_->GetBufferSize(),
+    HRESULT hr = d3d11_device_->CreateInputLayout(kInputElementDesc,
+                                                  ARRAYSIZE(kInputElementDesc),
+                                                  vs_blob_->GetBufferPointer(),
+                                                  vs_blob_->GetBufferSize(),
                                                   &input_layout_);
     assert(SUCCEEDED(hr));
 }
 
 void KD3DSurface::create_vertex_buffer()
 {
-    float kVertexData[]{ // x, y, r, g, b, a
-        0.0f,  0.5f, 0.f, 1.f, 0.f, 1.f,
-        0.5f, -0.5f, 1.f, 0.f, 0.f, 1.f,
-        -0.5f, -0.5f, 0.f, 0.f, 1.f, 1.f
+     // x, y, r, g, b, a
+    float kVertexData[]{ 0.0f,  0.5f, 0.f, 1.f, 0.f, 1.f,
+                         0.5f, -0.5f, 1.f, 0.f, 0.f, 1.f,
+                        -0.5f, -0.5f, 0.f, 0.f, 1.f, 1.f
     };
     stride_ = 6 * sizeof(float);
     nvertex_ = sizeof(kVertexData) / stride_;
@@ -346,14 +389,11 @@ void KD3DSurface::render()
     FLOAT kBackgroundColor[4]{ 0.1f, 0.2f, 0.6f, 1.0f };
     d3d11_device_context_->ClearRenderTargetView(d3d11_frame_buffer_view_, kBackgroundColor);
 
-    RECT window_rect{};
-    GetClientRect(hwnd_, &window_rect);
-    D3D11_VIEWPORT d3d11_viewport{
-        0.0f, 0.0f,
-        (FLOAT)(window_rect.right - window_rect.left),
-        (FLOAT)(window_rect.bottom - window_rect.top),
-        0.0f, 1.0f
-    };
+    D3D11_VIEWPORT d3d11_viewport{0.0f, 0.0f,
+                                  static_cast<FLOAT>(surface_width_),
+                                  static_cast<FLOAT>(surface_height_),
+                                  0.0f, 1.0f
+    };    
 
     d3d11_device_context_->RSSetViewports(1, &d3d11_viewport);
 
@@ -389,6 +429,12 @@ void KD3DSurface::resize()
     HRESULT hr = dxgi_swap_chain_->ResizeBuffers(0, 0, 0, DXGI_FORMAT_UNKNOWN, 0);
     assert(SUCCEEDED(hr));
     create_render_target_resources();
+
+    DXGI_SWAP_CHAIN_DESC1 scd{};
+    hr = dxgi_swap_chain_->GetDesc1(&scd);
+    assert(SUCCEEDED(hr));
+    surface_width_ = scd.Width;
+    surface_height_ = scd.Height;
 }
 
 // REWRITE: Consider not passing in the device and context placeholders.
