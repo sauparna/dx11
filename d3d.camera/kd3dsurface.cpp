@@ -220,7 +220,8 @@ void KD3DSurface::create_pixel_shader()
     assert(shader_compiler_succeeded(hr, shader_compiler_error_blob));
     hr = d3d11_device_->CreatePixelShader(ps_blob_->GetBufferPointer(),
                                           ps_blob_->GetBufferSize(),
-                                          nullptr, &pixel_shader_);
+                                          nullptr,
+                                          &pixel_shader_);
     assert(SUCCEEDED(hr));
 }
 
