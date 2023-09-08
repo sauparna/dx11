@@ -1,12 +1,9 @@
 #pragma once
 
 #define UNICODE
-#define STRICT
 #define WIN32_LEAN_AND_MEAN
-#define NOMINMAX // Use the STL min/max
 
 #include <windows.h>
-#include <cassert>
 
 #ifndef HINST_THISCOMPONENT
 EXTERN_C IMAGE_DOS_HEADER __ImageBase;
