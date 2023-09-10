@@ -338,23 +338,5 @@ HRESULT KD3DSurface::create_d3d_device(D3D_DRIVER_TYPE const kD3DDriverType,
     assert(SUCCEEDED(hr));
     base_device_context->Release();
 
-#ifdef DEBUG_BUILD
-    ID3D11Debug *d3d_debug = nullptr;
-    (*d3d11_device)->QueryInterface(__uuidof(ID3D11Debug),
-                                    reinterpret_cast<void**>(&d3d_debug));
-    if (d3d_debug)
-    {
-        ID3D11InfoQueue *d3dInfoQueue = nullptr;
-        if (SUCCEEDED(d3d_debug->QueryInterface(__uuidof(ID3D11InfoQueue),
-                                                reinterpret_cast<void**>(&d3dInfoQueue))))
-        {
-            d3dInfoQueue->SetBreakOnSeverity(D3D11_MESSAGE_SEVERITY_CORRUPTION, true);
-            d3dInfoQueue->SetBreakOnSeverity(D3D11_MESSAGE_SEVERITY_ERROR, true);
-            d3dInfoQueue->Release();
-        }
-        d3d_debug->Release();
-    }
-#endif
-
     return hr;
 }
