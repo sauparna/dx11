@@ -106,7 +106,8 @@ void KD3DSurface::create_device_dependent_resources()
     hr = dxgi_factory->CreateSwapChainForHwnd(d3d11_device_,
                                               hwnd_,
                                               &dxgi_swap_chain_desc,
-                                              0, 0,
+                                              nullptr,
+                                              nullptr,
                                               &dxgi_swap_chain_);
     assert(SUCCEEDED(hr));
     dxgi_factory->Release();
