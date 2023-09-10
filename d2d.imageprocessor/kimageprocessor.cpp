@@ -1,6 +1,5 @@
-#include "kgraphics.h"
+#include "kwindow.h"
 #include "kimagingengine.h"
-#include "kd2dsurface.h"
 
 using namespace std;
 
@@ -14,7 +13,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
     if (SUCCEEDED(CoInitializeEx(NULL, COINIT_MULTITHREADED)))
     {
         {
-            unique_ptr<KImagingEngine> imaging_engine = make_unique<KImagingEngine>(D2D1::SizeU(340, 230));
+            unique_ptr<KImagingEngine> imaging_engine = make_unique<KImagingEngine>(340, 230);
             imaging_engine->run();
         }
         CoUninitialize();

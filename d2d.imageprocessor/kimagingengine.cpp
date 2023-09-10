@@ -1,13 +1,12 @@
-#include "kgraphics.h"
+#include "kwindow.h"
 #include "kimagingengine.h"
-#include "kd2dsurface.h"
 
 using namespace std;
 
-KImagingEngine::KImagingEngine(D2D1_SIZE_U surface_sz) : KWindow{}
+KImagingEngine::KImagingEngine(int surface_width, int surface_height) : KWindow{}
 {
-    initialize(surface_sz.width, surface_sz.height);
-    k_d2d_surface_ = std::make_unique<KD2DSurface>(hwnd_, surface_sz);
+    initialize(surface_width, surface_height);
+    k_d2d_surface_ = std::make_unique<KD2DSurface>(hwnd_, surface_width, surface_height);
 }
 
 LRESULT KImagingEngine::wndproc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
