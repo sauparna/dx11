@@ -1,6 +1,5 @@
 #pragma once
 
-#include <wincodec.h>
 #include <d2d1_2.h>
 #include <d3dcompiler.h>
 #include <dxgi1_2.h>
