@@ -323,11 +323,16 @@ HRESULT KD3DSurface::create_d3d_device(D3D_DRIVER_TYPE const kD3DDriverType,
     kCreationFlags |= D3D11_CREATE_DEVICE_DEBUG;
 #endif
 
-    HRESULT hr = D3D11CreateDevice(0, kD3DDriverType,
-                                   0, kCreationFlags,
-                                   kFeatureLevels, ARRAYSIZE(kFeatureLevels),
-                                   D3D11_SDK_VERSION, &base_device,
-                                   0, &base_device_context);
+    HRESULT hr = D3D11CreateDevice(0,
+                                   kD3DDriverType,
+                                   0,
+                                   kCreationFlags,
+                                   kFeatureLevels,
+                                   ARRAYSIZE(kFeatureLevels),
+                                   D3D11_SDK_VERSION,
+                                   &base_device,
+                                   0,
+                                   &base_device_context);
     assert(SUCCEEDED(hr));
     hr = base_device->QueryInterface(__uuidof(ID3D11Device1),
                                      reinterpret_cast<void**>(d3d11_device));
