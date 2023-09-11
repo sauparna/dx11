@@ -148,7 +148,6 @@ void KD2DSurface::create_render_target_resources()
     D2D1_BITMAP_PROPERTIES1 d2d1_dxgi_bitmap_prop = D2D1::BitmapProperties1(
         D2D1_BITMAP_OPTIONS_TARGET | D2D1_BITMAP_OPTIONS_CANNOT_DRAW,
         D2D1::PixelFormat(DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_IGNORE),
-        // D2D1::PixelFormat(DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_PREMULTIPLIED),
         96.0f,
         96.0f);
     hr = d2d1_device_context_->CreateBitmapFromDxgiSurface(dxgi_surface,
