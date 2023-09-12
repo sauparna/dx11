@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <random>
 #include <d2d1_2.h>
 #include <dxgi1_2.h>
 #include <d3d11_1.h>
@@ -41,13 +42,18 @@ protected:
     const int kMemHeight{100};
     const int kBytesPerPixel{4};
     const int kMemStride = kMemWidth * kBytesPerPixel;
-    const D2D1_RECT_U kMemSrcRect = D2D1::RectU(0, 0, kMemWidth, kMemHeight);
     const int kMemSize{kMemWidth * kMemHeight};
     uint32_t *mem_{};
-    int x_{kMemWidth / 2};
-    int y_{kMemWidth / 2};
-    int dx_{1};
-    int dy_{1};
+    float x_{static_cast<float>(kMemWidth) / 2.f};
+    float y_{static_cast<float>(kMemHeight) / 2.f};
+    float dx_{1.f};
+    float dy_{1.f};
+    float speed_{1.f};
+    std::random_device rdev{};
+    std::mt19937 rng;
+    std::uniform_int_distribution<int> rdist;
+    float cosine_of_random_deflection_angle_delta();
+    float sine_of_random_deflection_angle_delta();
     
     // 32-bit color layout: 0xaarrggbb, where aa = alpha, rr = red, bb = green, gg = blue
     void put_pixel(int x, int y, uint32_t color);

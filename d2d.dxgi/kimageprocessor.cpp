@@ -13,7 +13,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
     if (SUCCEEDED(CoInitializeEx(NULL, COINIT_MULTITHREADED)))
     {
         {
-            unique_ptr<KImagingEngine> imaging_engine = make_unique<KImagingEngine>(340, 230);
+            unique_ptr<KImagingEngine> imaging_engine = make_unique<KImagingEngine>(320, 200);
             imaging_engine->run();
         }
         CoUninitialize();
