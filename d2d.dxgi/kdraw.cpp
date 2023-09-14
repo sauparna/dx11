@@ -1,5 +1,5 @@
 #include "kwindow.h"
-#include "kimagingengine.h"
+#include "kdrawingengine.h"
 
 using namespace std;
 
@@ -13,8 +13,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
     if (SUCCEEDED(CoInitializeEx(NULL, COINIT_MULTITHREADED)))
     {
         {
-            unique_ptr<KImagingEngine> imaging_engine = make_unique<KImagingEngine>(320, 200);
-            imaging_engine->run();
+            unique_ptr<KDrawingEngine> drawing_engine = make_unique<KDrawingEngine>(320, 200);
+            drawing_engine->run();
         }
         CoUninitialize();
     }

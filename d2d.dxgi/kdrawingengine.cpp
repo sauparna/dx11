@@ -1,15 +1,15 @@
 #include "kwindow.h"
-#include "kimagingengine.h"
+#include "kdrawingengine.h"
 
 using namespace std;
 
-KImagingEngine::KImagingEngine(int surface_width, int surface_height) : KWindow{}
+KDrawingEngine::KDrawingEngine(int surface_width, int surface_height) : KWindow{}
 {
     initialize(surface_width, surface_height);
     k_d2d_surface_ = std::make_unique<KD2DSurface>(hwnd_, surface_width, surface_height);
 }
 
-LRESULT KImagingEngine::wndproc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
+LRESULT KDrawingEngine::wndproc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 {
     LRESULT lr = 0;
     switch (msg)
@@ -31,7 +31,7 @@ LRESULT KImagingEngine::wndproc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lpara
     return lr;
 }
 
-void KImagingEngine::run()
+void KDrawingEngine::run()
 {
     static bool running = true;
     while (running)

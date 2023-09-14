@@ -3,10 +3,10 @@
 #include <memory>
 #include "kd2dsurface.h"
 
-class KImagingEngine : public KWindow
+class KDrawingEngine : public KWindow
 {
 public:
-    KImagingEngine(int surface_width, int surface_height);
+    KDrawingEngine(int surface_width, int surface_height);
     LRESULT wndproc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam);
     void run();
     
