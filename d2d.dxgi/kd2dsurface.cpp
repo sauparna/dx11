@@ -8,9 +8,9 @@ KD2DSurface::KD2DSurface(HWND hwnd, int width, int height)
     : hwnd_{hwnd},
       surface_width_{width},
       surface_height_{height},
-      kbitmap{width / 2, height / 2},
-      scene{width / 2, height / 2}
-{    
+      kbitmap{std::min(width, height) / 2, std::min(width, height) / 2},
+      scene{std::min(width, height) / 2, std::min(width, height) / 2}
+{
     create_device_independent_resources();
     create_device_dependent_resources();
     create_render_target_resources();
