@@ -10,7 +10,7 @@ KD2DSurface::KD2DSurface(HWND hwnd, int width, int height)
       surface_height_{height},
       kbitmap{width / 2, height / 2},
       scene{width / 2, height / 2}
-{
+{    
     create_device_independent_resources();
     create_device_dependent_resources();
     create_render_target_resources();
@@ -168,7 +168,10 @@ void KD2DSurface::discard_render_target_resources()
 
 void KD2DSurface::render()
 {
+    
     HRESULT hr = S_OK;
+
+    kbitmap.draw(scene);
 
     ///////////////////////////////////////////////////////////////////////////////////////////
     // Copy the bitmap contents from memory to the target-bitmap.
@@ -180,13 +183,6 @@ void KD2DSurface::render()
                                         dest_point.x + kbitmap.width(),
                                         dest_point.y + kbitmap.height());
     hr = d2d1_dxgi_bitmap_->CopyFromMemory(&dest_rect, kbitmap.data(), kbitmap.stride());
-    // D2D1_POINT_2U dest_point = D2D1::Point2U((surface_width_  - kMemWidth) / 2,
-    //                                          (surface_height_ - kMemHeight) / 2);
-    // D2D1_RECT_U dest_rect = D2D1::RectU(dest_point.x,
-    //                                     dest_point.y,
-    //                                     dest_point.x + kMemWidth,
-    //                                     dest_point.y + kMemHeight);
-    // hr = d2d1_dxgi_bitmap_->CopyFromMemory(&dest_rect, mem_, kMemStride);
     assert(SUCCEEDED(hr));
     ///////////////////////////////////////////////////////////////////////////////////////////
 
@@ -217,7 +213,6 @@ void KD2DSurface::resize()
 void KD2DSurface::update()
 {
     scene.update();
-    kbitmap.draw(scene);
 }
 
 HRESULT KD2DSurface::create_d3d_device(D3D_DRIVER_TYPE const kD3DDriverType,

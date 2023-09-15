@@ -62,7 +62,7 @@ void KDrawingEngine::run()
         }
 
         if (k_d2d_surface_ == nullptr) continue;
-        k_d2d_surface_->render();
         k_d2d_surface_->update();
+        k_d2d_surface_->render();
     }
 }

@@ -3,8 +3,8 @@
 KScene::KScene(int width, int height) :
     width_{width},
     height_{height},
-    x_{static_cast<float>(width_) / 2.f},
-    y_{static_cast<float>(height_) / 2.f},
+    x_{static_cast<float>(width) / 2.f},
+    y_{static_cast<float>(height) / 2.f},
     rng{rdev()},
     rdist{std::uniform_int_distribution<int>(1, 9)}
 {
