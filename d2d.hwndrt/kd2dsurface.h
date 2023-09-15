@@ -4,9 +4,6 @@
 #include <d2d1.h>
 #include <dwrite.h>
 #include <wincodec.h>
-// #include <d2d1_2.h>
-// #include <dxgi1_2.h>
-// #include <d3d11_1.h>
 
 #include "kbitmap.h"
 #include "kscene.h"
@@ -33,9 +30,6 @@ public:
     void resize();
     void render();
     void update();
-    // HRESULT create_d3d_device(D3D_DRIVER_TYPE const kD3DDriveType,
-    //                           ID3D11Device1 **d3d11_device,
-    //                           ID3D11DeviceContext1 **d3d11_device_context);
     bool device_lost_{false};
     bool window_resized_{true};
 
@@ -64,17 +58,6 @@ protected:
     const D2D1_RECT_F kTextRect{0, 0, 50, 50};
     const wchar_t *kText = L"S";
 
-    // void initialize_d3d11_debug_layer(ID3D11Device1 **d3d11_device);
-    
-    // ID3D11Device1 *d3d11_device_{};
-    // ID3D11DeviceContext1* d3d11_device_context_{};
-    // ID2D1Factory2 *d2d1_factory_{};
-    // ID2D1DeviceContext *d2d1_device_context_{};
-    // ID2D1Bitmap1 *d2d1_dxgi_bitmap_{};
-    // IDXGISwapChain1 *dxgi_swap_chain_{};
-
-    // UINT d3d11_runtime_layers_{D3D11_CREATE_DEVICE_BGRA_SUPPORT};
-    
     HWND hwnd_{};
     int surface_width_{1};
     int surface_height_{1};

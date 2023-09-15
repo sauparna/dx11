@@ -92,10 +92,6 @@ void KD2DSurface::create_wic_resources()
 {
     HRESULT hr = S_OK;
 
-    ///////////////////////////////////////////////////////////////////////////////////////////
-    // Create WIC resources to read/write image data.
-    ///////////////////////////////////////////////////////////////////////////////////////////
-
     hr = CoCreateInstance(CLSID_WICImagingFactory2,
                           nullptr,
                           CLSCTX_INPROC_SERVER,
@@ -122,8 +118,6 @@ void KD2DSurface::create_wic_resources()
                                     WICBitmapPaletteTypeCustom);
     assert(SUCCEEDED(hr));
     wic_converter_->GetSize(&bitmap_width_, &bitmap_height_);
-    // hr = wic_converter_->GetResolution(&dpix, &dpiy);
-    // assert(SUCCEEDED(hr));
 }
 
 void KD2DSurface::discard_wic_resources()
@@ -165,10 +159,7 @@ void KD2DSurface::render()
     ///////////////////////////////////////////////////////////////////////////////////////////
     D2D1_POINT_2U dest_point = D2D1::Point2U((surface_width_  - kbitmap.width()) / 2,
                                              (surface_height_ - kbitmap.height()) / 2);
-    D2D1_RECT_U dest_rect = D2D1::RectU(dest_point.x,
-                                        dest_point.y,
-                                        dest_point.x + kbitmap.width(),
-                                        dest_point.y + kbitmap.height());
+    D2D1_RECT_U dest_rect = D2D1::RectU(0, 0, kbitmap.width(), kbitmap.height());
     hr = d2d1_bitmap_->CopyFromMemory(&dest_rect, kbitmap.data(), kbitmap.stride());
     assert(SUCCEEDED(hr));
     ///////////////////////////////////////////////////////////////////////////////////////////
@@ -191,8 +182,8 @@ void KD2DSurface::render()
     hwndrt_->DrawBitmap(d2d1_bitmap_,
                         D2D1::RectF(50.f + 130.f,
                                     10.f,
-                                    50.f + 130.f + 100.f,
-                                    10.f + 100.f));
+                                    50.f + 130.f + static_cast<float>(kbitmap.width()),
+                                    10.f + static_cast<float>(kbitmap.height())));
     hr = hwndrt_->EndDraw();
     if (hr == D2DERR_RECREATE_TARGET)
     {
@@ -211,11 +202,8 @@ void KD2DSurface::resize()
     surface_width_ = rect.right;
     surface_height_ = rect.bottom;
 
-    // REWRITE: Do you need to discard/recreate when using a HWND RT?
-    // discard_render_target_resources();
     HRESULT hr = hwndrt_->Resize(D2D1::SizeU(surface_width_, surface_height_));
     assert(SUCCEEDED(hr));
-    // create_render_target_resources();
 }
 
 void KD2DSurface::update()
