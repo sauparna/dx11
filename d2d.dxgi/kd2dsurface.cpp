@@ -8,13 +8,9 @@ KD2DSurface::KD2DSurface(HWND hwnd, int width, int height)
     : hwnd_{hwnd},
       surface_width_{width},
       surface_height_{height},
-      rng{rdev()},
-      rdist{std::uniform_int_distribution<int>(1, 9)}
+      kbitmap{width / 2, height / 2},
+      scene{width / 2, height / 2}
 {
-    mem_ = new uint32_t[kMemSize];
-    clear_bitmap_mem(0xffffffff);
-    put_pixel(static_cast<int>(x_), static_cast<int>(y_), 0xffffffff);
-
     create_device_independent_resources();
     create_device_dependent_resources();
     create_render_target_resources();
@@ -22,7 +18,6 @@ KD2DSurface::KD2DSurface(HWND hwnd, int width, int height)
 
 KD2DSurface::~KD2DSurface()
 {
-    delete [] mem_;
     discard_device_dependent_resources();
     discard_device_independent_resources();
 }
@@ -178,13 +173,20 @@ void KD2DSurface::render()
     ///////////////////////////////////////////////////////////////////////////////////////////
     // Copy the bitmap contents from memory to the target-bitmap.
     ///////////////////////////////////////////////////////////////////////////////////////////
-    D2D1_POINT_2U dest_point = D2D1::Point2U((surface_width_  - kMemWidth) / 2,
-                                             (surface_height_ - kMemHeight) / 2);
+    D2D1_POINT_2U dest_point = D2D1::Point2U((surface_width_  - kbitmap.width()) / 2,
+                                             (surface_height_ - kbitmap.height()) / 2);
     D2D1_RECT_U dest_rect = D2D1::RectU(dest_point.x,
                                         dest_point.y,
-                                        dest_point.x + kMemWidth,
-                                        dest_point.y + kMemHeight);
-    hr = d2d1_dxgi_bitmap_->CopyFromMemory(&dest_rect, mem_, kMemStride);
+                                        dest_point.x + kbitmap.width(),
+                                        dest_point.y + kbitmap.height());
+    hr = d2d1_dxgi_bitmap_->CopyFromMemory(&dest_rect, kbitmap.data(), kbitmap.stride());
+    // D2D1_POINT_2U dest_point = D2D1::Point2U((surface_width_  - kMemWidth) / 2,
+    //                                          (surface_height_ - kMemHeight) / 2);
+    // D2D1_RECT_U dest_rect = D2D1::RectU(dest_point.x,
+    //                                     dest_point.y,
+    //                                     dest_point.x + kMemWidth,
+    //                                     dest_point.y + kMemHeight);
+    // hr = d2d1_dxgi_bitmap_->CopyFromMemory(&dest_rect, mem_, kMemStride);
     assert(SUCCEEDED(hr));
     ///////////////////////////////////////////////////////////////////////////////////////////
 
@@ -214,24 +216,8 @@ void KD2DSurface::resize()
 
 void KD2DSurface::update()
 {
-    x_ += dx_;
-    y_ += dy_;
-
-    if (x_ >= static_cast<float>(kMemWidth) || x_ <= 0.f)
-    {
-        x_ = std::clamp<float>(x_, 0.f, static_cast<float>(kMemWidth) -1.f);
-        float switch_direction = signbit(dx_) ? 1.f : -1.f;
-        dx_ = switch_direction * cosine_of_random_deflection_angle_delta() * speed_;
-    }
-
-    if (y_ >= static_cast<float>(kMemHeight) || y_ <= 0.f)
-    {
-        y_ = std::clamp<float>(y_, 0.f, static_cast<float>(kMemHeight) - 1.f);
-        float switch_direction = signbit(dy_) ? 1.f : -1.f;
-        dy_ = switch_direction * sine_of_random_deflection_angle_delta() * speed_;
-    }
-
-    put_pixel(static_cast<int>(x_), static_cast<int>(y_), 0x00000000);
+    scene.update();
+    kbitmap.draw(scene);
 }
 
 HRESULT KD2DSurface::create_d3d_device(D3D_DRIVER_TYPE const kD3DDriverType,
@@ -272,40 +258,4 @@ HRESULT KD2DSurface::create_d3d_device(D3D_DRIVER_TYPE const kD3DDriverType,
 #endif
     
     return hr;
-}
-
-inline void KD2DSurface::put_pixel(int x, int y, uint32_t color)
-{
-    mem_[y * kMemWidth + x] = color;
-}
-
-void KD2DSurface::clear_bitmap_mem(uint32_t color)
-{
-    for (int y = 0; y < kMemHeight; y++)
-    {
-        for (int x = 0; x < kMemWidth; x++)
-        {
-            mem_[y * kMemWidth + x] = color;
-        }
-    }
-}
-
-// cos(k * 1/10 * pi/2), where k in [1, 9].
-// k != 10 to ensure we don't return a zero.
-inline float KD2DSurface::cosine_of_random_deflection_angle_delta()
-{
-    static const float half_pi = 3.141592f / 2;
-    static const float delta = half_pi / 10.0f;
-    int k = rdist(rng);
-    return cosf(static_cast<float>(k) * delta);
-}
-
-// sin(k * 1/10 * pi/2), where k in [1, 9].
-// k != 10 to ensure we don't return a zero.
-inline float KD2DSurface::sine_of_random_deflection_angle_delta()
-{
-    static const float half_pi = 3.141592f / 2;
-    static const float delta = half_pi / 10.0f;
-    int k = rdist(rng);
-    return sinf(static_cast<float>(k) * delta);
 }
