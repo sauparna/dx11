@@ -20,8 +20,8 @@ public:
     void draw(KScene& scene);
     
 private:
-    int width_{100};
-    int height_{100};
+    int width_{128};
+    int height_{128};
     int bytes_per_pixel_{4};
     int stride_{};
     int size_{};

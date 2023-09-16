@@ -6,10 +6,9 @@
 
 KD2DSurface::KD2DSurface(HWND hwnd, int width, int height)
     : hwnd_{hwnd},
-      surface_width_{width},
-      surface_height_{height},
-      kbitmap{std::min(width, height) / 2, std::min(width, height) / 2},
-      scene{std::min(width, height) / 2, std::min(width, height) / 2}
+      surface_size_{static_cast<uint32_t>(width), static_cast<uint32_t>(height)},
+      kbitmap_{128, 128},
+      scene_{128, 128}
 {
     create_device_independent_resources();
     create_device_dependent_resources();
@@ -54,9 +53,8 @@ void KD2DSurface::create_render_target_resources()
     HRESULT hr = S_OK;
 
     hr = d2d1_factory_->CreateHwndRenderTarget(D2D1::RenderTargetProperties(),
-                                               D2D1::HwndRenderTargetProperties(
-                                                   hwnd_,
-                                                   D2D1::SizeU(surface_width_, surface_height_)),
+                                               D2D1::HwndRenderTargetProperties(hwnd_,
+                                                                                surface_size_),
                                                &hwndrt_);
     assert(SUCCEEDED(hr));
     
@@ -72,9 +70,9 @@ void KD2DSurface::create_render_target_resources()
     D2D1_BITMAP_PROPERTIES bp = D2D1::BitmapProperties();
     bp.pixelFormat = D2D1::PixelFormat(DXGI_FORMAT_B8G8R8A8_UNORM,
                                        D2D1_ALPHA_MODE_IGNORE);
-    hr = hwndrt_->CreateBitmap(D2D1::SizeU(kbitmap.width(), kbitmap.height()),
-                               kbitmap.data(),
-                               kbitmap.stride(),
+    hr = hwndrt_->CreateBitmap(D2D1::SizeU(kbitmap_.width(), kbitmap_.height()),
+                               kbitmap_.data(),
+                               kbitmap_.stride(),
                                bp,
                                &d2d1_bitmap_);
     assert(SUCCEEDED(hr));
@@ -136,7 +134,7 @@ void KD2DSurface::create_text_resources()
                                       DWRITE_FONT_WEIGHT_NORMAL,
                                       DWRITE_FONT_STYLE_NORMAL,
                                       DWRITE_FONT_STRETCH_NORMAL,
-                                      72.0f, L"en-us",
+                                      12.0f, L"en-us",
                                       &dwrite_text_format_);
     dwrite_text_format_->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_CENTER);
     dwrite_text_format_->SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_CENTER);
@@ -152,16 +150,39 @@ void KD2DSurface::render()
 {
     HRESULT hr = S_OK;
 
-    kbitmap.draw(scene);
+    kbitmap_.draw(scene_);
 
     ///////////////////////////////////////////////////////////////////////////////////////////
     // Copy the bitmap contents from memory to the Direct2D bitmap.
     ///////////////////////////////////////////////////////////////////////////////////////////
-    D2D1_POINT_2U dest_point = D2D1::Point2U((surface_width_  - kbitmap.width()) / 2,
-                                             (surface_height_ - kbitmap.height()) / 2);
-    D2D1_RECT_U dest_rect = D2D1::RectU(0, 0, kbitmap.width(), kbitmap.height());
-    hr = d2d1_bitmap_->CopyFromMemory(&dest_rect, kbitmap.data(), kbitmap.stride());
+    D2D1_RECT_U dest_rect = D2D1::RectU(0, 0, kbitmap_.width(), kbitmap_.height());
+    hr = d2d1_bitmap_->CopyFromMemory(&dest_rect, kbitmap_.data(), kbitmap_.stride());
     assert(SUCCEEDED(hr));
+    ///////////////////////////////////////////////////////////////////////////////////////////
+
+    ///////////////////////////////////////////////////////////////////////////////////////////
+    // INCOMPLETE
+    // Define layout.
+    ///////////////////////////////////////////////////////////////////////////////////////////
+    static const float kSeparator{10.f};
+    float kMargin{(surface_size_.width - (bitmap_width_ + kSeparator + kbitmap_.width())) / 2.f};
+    float kTextBoxWidth{bitmap_width_ + kSeparator + kbitmap_.width()};
+    float kTextBoxHeight{50.f};
+    const D2D1_RECT_F kWICBitmapRect{kMargin,
+                                     kSeparator,
+                                     kMargin + bitmap_width_,
+                                     kSeparator + bitmap_height_};
+    const D2D1_RECT_F kMemBitmapRect{kWICBitmapRect.right + kSeparator,
+                                     kSeparator,
+                                     kWICBitmapRect.right + kSeparator + kbitmap_.width(),
+                                     kSeparator + kbitmap_.height()};
+    const D2D1_RECT_F kTextRect{kMargin,
+                                kWICBitmapRect.bottom + kSeparator,
+                                kMargin + kTextBoxWidth,
+                                kWICBitmapRect.bottom + kSeparator + kTextBoxHeight};
+    const wchar_t *kText{L"Abcde efgh"};
+    // const wchar_t *kText{L""};
+   
     ///////////////////////////////////////////////////////////////////////////////////////////
 
     ///////////////////////////////////////////////////////////////////////////////////////////
@@ -174,16 +195,18 @@ void KD2DSurface::render()
                       dwrite_text_format_,
                       &kTextRect,
                       d2d1_text_brush_);
-    hwndrt_->DrawBitmap(d2d1_bitmap_from_wic_,
-                        D2D1::RectF(50.f,
-                                    10.f,
-                                    50.f + static_cast<float>(bitmap_width_),
-                                    10.f + static_cast<float>(bitmap_height_)));
-    hwndrt_->DrawBitmap(d2d1_bitmap_,
-                        D2D1::RectF(50.f + 130.f,
-                                    10.f,
-                                    50.f + 130.f + static_cast<float>(kbitmap.width()),
-                                    10.f + static_cast<float>(kbitmap.height())));
+    hwndrt_->DrawBitmap(d2d1_bitmap_from_wic_, kWICBitmapRect);
+    hwndrt_->DrawBitmap(d2d1_bitmap_, kMemBitmapRect);
+    // hwndrt_->DrawBitmap(d2d1_bitmap_from_wic_,
+    //                     D2D1::RectF(50.f,
+    //                                 10.f,
+    //                                 50.f + static_cast<float>(bitmap_width_),
+    //                                 10.f + static_cast<float>(bitmap_height_)));
+    // hwndrt_->DrawBitmap(d2d1_bitmap_,
+    //                     D2D1::RectF(50.f + 130.f,
+    //                                 10.f,
+    //                                 50.f + 130.f + static_cast<float>(kbitmap_.width()),
+    //                                 10.f + static_cast<float>(kbitmap_.height())));
     hr = hwndrt_->EndDraw();
     if (hr == D2DERR_RECREATE_TARGET)
     {
@@ -199,27 +222,27 @@ void KD2DSurface::resize()
 {
     RECT rect{};
     GetClientRect(hwnd_, &rect);
-    surface_width_ = rect.right;
-    surface_height_ = rect.bottom;
+    surface_size_.width = rect.right;
+    surface_size_.height = rect.bottom;
 
-    HRESULT hr = hwndrt_->Resize(D2D1::SizeU(surface_width_, surface_height_));
+    HRESULT hr = hwndrt_->Resize(surface_size_);
     assert(SUCCEEDED(hr));
 }
 
 void KD2DSurface::update()
 {
-    scene.update();
+    scene_.update();
 }
 
 void KD2DSurface::write_wic_bitmap(std::wstring filename)
 {
     HRESULT hr = S_OK;
     
-    IWICBitmapEncoder *wic_encoder;
+    IWICBitmapEncoder *wic_encoder{};
     hr = wic_factory_->CreateEncoder(GUID_ContainerFormatPng, NULL, &wic_encoder);
     assert(SUCCEEDED(hr));
 
-    IWICStream *wic_stream;
+    IWICStream *wic_stream{};
     hr = wic_factory_->CreateStream(&wic_stream);
     assert(SUCCEEDED(hr));
     hr = wic_stream->InitializeFromFilename(filename.c_str(), GENERIC_WRITE);
@@ -227,7 +250,7 @@ void KD2DSurface::write_wic_bitmap(std::wstring filename)
     hr = wic_encoder->Initialize(wic_stream, WICBitmapEncoderNoCache);
     assert(SUCCEEDED(hr));
 
-    IWICBitmapFrameEncode *wic_frame;
+    IWICBitmapFrameEncode *wic_frame{};
     hr = wic_encoder->CreateNewFrame(&wic_frame, NULL);
     assert(SUCCEEDED(hr));
     hr = wic_frame->Initialize(NULL);

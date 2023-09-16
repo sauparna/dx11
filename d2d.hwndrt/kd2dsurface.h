@@ -35,14 +35,16 @@ public:
 
 protected:
 
-    KBitmap kbitmap;
-    KScene scene;
+    KBitmap kbitmap_;
+    KScene scene_;
 
     ID2D1Factory *d2d1_factory_;
     ID2D1HwndRenderTarget *hwndrt_;
     ID2D1Bitmap *d2d1_bitmap_;
 
-    // Image file loader components.
+    ///////////////////////////////////////////////////////////////////////////////////////////
+    // WIC components.
+    ///////////////////////////////////////////////////////////////////////////////////////////
     IWICImagingFactory2 *wic_factory_{};
     IWICFormatConverter *wic_converter_{};
     IWICBitmap *wic_bitmap_{};
@@ -50,17 +52,18 @@ protected:
     std::wstring img_filename_{L"tintin_on_train.jpg"};
     unsigned bitmap_width_{};
     unsigned bitmap_height_{};
+    ///////////////////////////////////////////////////////////////////////////////////////////
 
-     // Text components.
-    IDWriteFactory *dwrite_factory_;
-    IDWriteTextFormat *dwrite_text_format_;
-    ID2D1SolidColorBrush *d2d1_text_brush_;
-    const D2D1_RECT_F kTextRect{0, 0, 50, 50};
-    const wchar_t *kText = L"S";
+    ///////////////////////////////////////////////////////////////////////////////////////////
+    // Text components.
+    ///////////////////////////////////////////////////////////////////////////////////////////
+    IDWriteFactory *dwrite_factory_{};
+    IDWriteTextFormat *dwrite_text_format_{};
+    ID2D1SolidColorBrush *d2d1_text_brush_{};
+    ///////////////////////////////////////////////////////////////////////////////////////////
 
     HWND hwnd_{};
-    int surface_width_{1};
-    int surface_height_{1};
+    D2D1_SIZE_U surface_size_{1, 1};
 };
 
 template <typename T>
