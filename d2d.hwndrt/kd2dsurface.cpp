@@ -150,7 +150,8 @@ void KD2DSurface::render()
 {
     static double text_update_interval{};
     double dt{};
-    clock_.time(&dt);
+    double elapsed_time = clock_.time(&dt);
+    elapsed_time /= 1E6;
     dt /= 1E6;
     double fps = 1.f / dt;
     text_update_interval += dt;
@@ -191,12 +192,14 @@ void KD2DSurface::render()
     ///////////////////////////////////////////////////////////////////////////////////////////
     // Compose the text.
     ///////////////////////////////////////////////////////////////////////////////////////////
-    static std::wstring text{};
+    static std::wstring text2{L"FPS = " + std::to_wstring(fps)};
     if (text_update_interval > 1.f)
     {
         text_update_interval = 0.f;
-        text = L"FPS = " + std::to_wstring(fps);
+        text2 = L"FPS = " + std::to_wstring(fps);
     }
+    std::wstring text1{L"Elapsed time: " + std::to_wstring(elapsed_time) + L" s\n"};
+    std::wstring text{text1 + text2};
     ///////////////////////////////////////////////////////////////////////////////////////////
 
     ///////////////////////////////////////////////////////////////////////////////////////////
