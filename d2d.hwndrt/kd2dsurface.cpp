@@ -148,6 +148,13 @@ void KD2DSurface::discard_text_resources()
     
 void KD2DSurface::render()
 {
+    static double text_update_interval{};
+    double dt{};
+    clock_.time(&dt);
+    dt /= 1E6;
+    double fps = 1.f / dt;
+    text_update_interval += dt;
+    
     HRESULT hr = S_OK;
 
     kbitmap_.draw(scene_);
@@ -161,7 +168,6 @@ void KD2DSurface::render()
     ///////////////////////////////////////////////////////////////////////////////////////////
 
     ///////////////////////////////////////////////////////////////////////////////////////////
-    // INCOMPLETE
     // Define layout.
     ///////////////////////////////////////////////////////////////////////////////////////////
     static const float kSeparator{10.f};
@@ -180,9 +186,17 @@ void KD2DSurface::render()
                                 kWICBitmapRect.bottom + kSeparator,
                                 kMargin + kTextBoxWidth,
                                 kWICBitmapRect.bottom + kSeparator + kTextBoxHeight};
-    const wchar_t *kText{L"Abcde efgh"};
-    // const wchar_t *kText{L""};
-   
+    ///////////////////////////////////////////////////////////////////////////////////////////
+
+    ///////////////////////////////////////////////////////////////////////////////////////////
+    // Compose the text.
+    ///////////////////////////////////////////////////////////////////////////////////////////
+    static std::wstring text{};
+    if (text_update_interval > 1.f)
+    {
+        text_update_interval = 0.f;
+        text = L"FPS = " + std::to_wstring(fps);
+    }
     ///////////////////////////////////////////////////////////////////////////////////////////
 
     ///////////////////////////////////////////////////////////////////////////////////////////
@@ -190,23 +204,13 @@ void KD2DSurface::render()
     ///////////////////////////////////////////////////////////////////////////////////////////
     hwndrt_->BeginDraw();
     hwndrt_->Clear(D2D1::ColorF(D2D1::ColorF::FloralWhite));
-    hwndrt_->DrawText(kText,
-                      static_cast<UINT32>(wcslen(kText)),
+    hwndrt_->DrawText(text.c_str(),
+                      static_cast<UINT32>(wcslen(text.c_str())),
                       dwrite_text_format_,
                       &kTextRect,
                       d2d1_text_brush_);
     hwndrt_->DrawBitmap(d2d1_bitmap_from_wic_, kWICBitmapRect);
     hwndrt_->DrawBitmap(d2d1_bitmap_, kMemBitmapRect);
-    // hwndrt_->DrawBitmap(d2d1_bitmap_from_wic_,
-    //                     D2D1::RectF(50.f,
-    //                                 10.f,
-    //                                 50.f + static_cast<float>(bitmap_width_),
-    //                                 10.f + static_cast<float>(bitmap_height_)));
-    // hwndrt_->DrawBitmap(d2d1_bitmap_,
-    //                     D2D1::RectF(50.f + 130.f,
-    //                                 10.f,
-    //                                 50.f + 130.f + static_cast<float>(kbitmap_.width()),
-    //                                 10.f + static_cast<float>(kbitmap_.height())));
     hr = hwndrt_->EndDraw();
     if (hr == D2DERR_RECREATE_TARGET)
     {

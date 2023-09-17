@@ -7,6 +7,7 @@
 
 #include "kbitmap.h"
 #include "kscene.h"
+#include "kclock.h"
 
 class KD2DSurface
 {
@@ -37,6 +38,7 @@ protected:
 
     KBitmap kbitmap_;
     KScene scene_;
+    KClock clock_{};
 
     ID2D1Factory *d2d1_factory_;
     ID2D1HwndRenderTarget *hwndrt_;
