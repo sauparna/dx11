@@ -5,12 +5,12 @@ KWindow::KWindow() { }
 
 KWindow::~KWindow() {}
 
-bool KWindow::initialize(int surface_width = 400, int surface_height = 300)
+bool KWindow::Initialize(int surface_width = 400, int surface_height = 300)
 {
     WNDCLASSEX wc{};
     wc.cbSize = sizeof(WNDCLASSEX);
     wc.style = CS_HREDRAW | CS_VREDRAW;
-    wc.lpfnWndProc = static_wndproc;
+    wc.lpfnWndProc = StaticWndProc;
     wc.hInstance = HINST_THISCOMPONENT;
     wc.hIcon = LoadIcon(0, IDI_APPLICATION);
     wc.hCursor = LoadCursor(NULL, IDC_ARROW);
@@ -57,7 +57,7 @@ bool KWindow::initialize(int surface_width = 400, int surface_height = 300)
     return true;
 }
 
-LRESULT KWindow::wndproc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
+LRESULT KWindow::WndProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 {
     LRESULT lr = 0;
     switch (msg)
@@ -77,7 +77,7 @@ LRESULT KWindow::wndproc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
     return lr;
 }
 
-LRESULT CALLBACK KWindow::static_wndproc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
+LRESULT CALLBACK KWindow::StaticWndProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 {
     KWindow *ptr_window;
     if (msg == WM_NCCREATE)
@@ -92,11 +92,11 @@ LRESULT CALLBACK KWindow::static_wndproc(HWND hwnd, UINT msg, WPARAM wparam, LPA
     {
         ptr_window = (KWindow*)GetWindowLongPtr(hwnd, GWLP_USERDATA);
     }
-    if (ptr_window) return ptr_window->wndproc(hwnd, msg, wparam, lparam);
+    if (ptr_window) return ptr_window->WndProc(hwnd, msg, wparam, lparam);
     return DefWindowProc(hwnd, msg, wparam, lparam);
 }
 
-void KWindow::run()
+void KWindow::Run()
 {
     MSG msg;
     while (GetMessage(&msg, NULL, 0, 0))
