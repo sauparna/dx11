@@ -4,6 +4,7 @@
 #include <d2d1_2.h>
 #include <dxgi1_2.h>
 #include <d3d11_1.h>
+#include <dwrite.h>
 
 #include "kscene.h"
 
@@ -18,6 +19,9 @@ public:
     void discard_device_dependent_resources();
     void create_render_target_resources();
     void discard_render_target_resources();
+
+    void create_text_resources();
+    void discard_text_resources();
 
     void resize();
     void render(KScene& scene);
@@ -43,6 +47,14 @@ protected:
     
     UINT d3d11_runtime_layers_{D3D11_CREATE_DEVICE_BGRA_SUPPORT};
     
+    ///////////////////////////////////////////////////////////////////////////////////////////
+    // Text components.
+    ///////////////////////////////////////////////////////////////////////////////////////////
+    IDWriteFactory *dwrite_factory_{};
+    IDWriteTextFormat *dwrite_text_format_{};
+    ID2D1SolidColorBrush *d2d1_text_brush_{};
+    ///////////////////////////////////////////////////////////////////////////////////////////
+
     HWND hwnd_{};
     D2D1_SIZE_U size_{1, 1};
 };

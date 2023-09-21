@@ -1,7 +1,6 @@
 #include "kwindow.h"
 #include <windowsx.h>
 #include "kdrawingengine.h"
-#include "resource.h"
 
 using namespace std;
 
@@ -19,7 +18,6 @@ LRESULT KDrawingEngine::WndProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lpara
     switch (msg)
     {
 	case WM_CREATE:
-		h_accel_tab_ = LoadAccelerators(((LPCREATESTRUCT)lparam)->hInstance, MAKEINTRESOURCE(IDR_ACCEL1));
 		h_cursor_ = LoadCursor(NULL, IDC_CROSS);
 		break;
     case WM_KEYDOWN:
@@ -48,18 +46,15 @@ LRESULT KDrawingEngine::WndProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lpara
 	case WM_MOUSEWHEEL:
 		onMouseWheelMove(GET_WHEEL_DELTA_WPARAM(wparam));
 		break;
-	case WM_COMMAND:
-		onCommand(LOWORD(wparam));
-		break;
 	case WM_SETCURSOR:
 		if (LOWORD(lparam) == HTCLIENT)
 		{
 			switch (mode_)
 			{
-			case Mode::DRAW:
+			case Mode::Draw:
 				h_cursor_ = LoadCursor(NULL, IDC_CROSS);
 				break;
-			case Mode::SELECT:
+			case Mode::Select:
 				h_cursor_ = LoadCursor(NULL, IDC_HAND);
 				break;
 			}
@@ -94,7 +89,6 @@ void KDrawingEngine::Run()
             surface_->window_resized_ = false;
         }
 
-        if (surface_ == nullptr) continue;
         if (surface_->device_lost_)
         {
             surface_->discard_device_dependent_resources();
@@ -103,23 +97,45 @@ void KDrawingEngine::Run()
             surface_->device_lost_ = false;
         }
 
-        if (surface_ == nullptr) continue;
         surface_->update(scene_);
         surface_->render(scene_);
     }
 }
 
-void KDrawingEngine::onKeyDown(WPARAM wparam, LPARAM lparam)
+void KDrawingEngine::onKeyDown(WPARAM wparam, LPARAM)
 {
     if (wparam == VK_ESCAPE)
+    {
         DestroyWindow(hwnd_);
+    }
+	else if (wparam == 0x4D) // M
+	{
+		if (mode_ == Mode::Draw)
+		{
+			mode_ = Mode::Select;
+            scene_.mode_text_ = L"SELECT/MOVE/RESIZE";
+		}
+		else
+		{
+			mode_ = Mode::Draw;
+            scene_.mode_text_ = L"DRAW";
+		}
+
+        // Force a cursor redraw
+        {
+            POINT p{};
+            GetCursorPos(&p);
+            SetCursorPos(p.x, p.y);
+        }
+	}
 }
 
 void KDrawingEngine::onLButtonDown(D2D1_POINT_2L point)
 {
-    D2D1_POINT_2F fpoint = left_click_ = toDIP(point);
+    D2D1_POINT_2F fpoint = left_click_ = D2D1_POINT_2F{static_cast<float>(point.x),
+                                                       static_cast<float>(point.y)};
 
-    if (mode_ == Mode::DRAW)
+    if (mode_ == Mode::Draw)
     {
 		if (DragDetect(hwnd_, point))
 		{
@@ -130,7 +146,7 @@ void KDrawingEngine::onLButtonDown(D2D1_POINT_2L point)
 			scene_.draw_bounding_box_ = true;
 		}
     }
-    else if (mode_ == Mode::SELECT)
+    else if (mode_ == Mode::Select)
     {
 		scene_.ellipse_iter_ = scene_.ellipse_list_.end();
 		if (scene_.selectShape(fpoint))
@@ -142,13 +158,11 @@ void KDrawingEngine::onLButtonDown(D2D1_POINT_2L point)
 			prev_point_ = left_click_;
 		}
     }
-    // REWRITE: Necessary?
-    InvalidateRect(hwnd_, NULL, FALSE);
 }
 
 void KDrawingEngine::onLButtonUp()
 {
-	if (mode_ == Mode::DRAW && (scene_.ellipse_iter_ != scene_.ellipse_list_.end()))
+	if (mode_ == Mode::Draw && (scene_.ellipse_iter_ != scene_.ellipse_list_.end()))
 	{
 		scene_.ellipse_iter_ = scene_.ellipse_list_.end();
 	}
@@ -156,30 +170,29 @@ void KDrawingEngine::onLButtonUp()
 	scene_.draw_bounding_box_ = false;
 
 	ReleaseCapture();
-	InvalidateRect(hwnd_, NULL, FALSE);
 }
 
 void KDrawingEngine::onMouseMove(D2D1_POINT_2L point, WPARAM wparam)
 {
-	D2D1_POINT_2F fpoint = toDIP(point);
+	D2D1_POINT_2F fpoint{static_cast<float>(point.x),
+                         static_cast<float>(point.y)};
 
 	if (((DWORD)wparam & MK_LBUTTON) && (scene_.ellipse_iter_ != scene_.ellipse_list_.end()))
 	{
-		if (mode_ == Mode::DRAW)
+		if (mode_ == Mode::Draw)
 		{
-			// Draw an ellipse centered in the bounding box described
-			// by the clicked point and current mouse point.
+			// Construct an ellipse centered in the bounding box
+			// described by the clicked point and current mouse point.
 			D2D1_POINT_2F sz{ (fpoint.x - left_click_.x) * .5f , (fpoint.y - left_click_.y) * .5f };
 			*(scene_.ellipse_iter_) = D2D1_ELLIPSE{D2D1_POINT_2F{left_click_.x + sz.x, left_click_.y + sz.y}, sz.x, sz.y};
 
 			scene_.bounding_box_ = D2D1_RECT_F{ left_click_.x, left_click_.y, fpoint.x, fpoint.y };
 			scene_.draw_bounding_box_ = true;
 		}
-		else if (mode_ == Mode::SELECT)
+		else if (mode_ == Mode::Select)
 		{
-			// Move ellipse by the delta the mouse pointer moved from
-			// its previous position and save the new position of the
-			// pointer.
+			// Move ellipse by the mouse-pointer movement-delta and
+			// save the new position.
 			float dx = fpoint.x - prev_point_.x;
 			float dy = fpoint.y - prev_point_.y;
 			scene_.ellipse_iter_->point.x += dx;
@@ -187,67 +200,26 @@ void KDrawingEngine::onMouseMove(D2D1_POINT_2L point, WPARAM wparam)
 
 			prev_point_ = fpoint;
 		}
-
-		InvalidateRect(hwnd_, NULL, FALSE);
 	}    
 }
 void KDrawingEngine::onMouseWheelMove(int wheel_data)
 {
 	if (scene_.ellipse_iter_ != scene_.ellipse_list_.end())
 	{
-		// TODO: Relocate magic number; 120 is recommended in Windows documentation.
-		// See: https://docs.microsoft.com/en-us/windows/win32/learnwin32/other-mouse-operations#mouse-wheel
+		// REWRITE: Relocate the magic numbers; 120 is recommended in
+		// Windows documentation; read the page:
+        //
+		// https://docs.microsoft.com/en-us/windows/win32/learnwin32/other-mouse-operations#mouse-wheel
 		int steps = wheel_data / 120;
-		float scale = 1.f + (float)steps * 0.01f;
+		float scale = 1.f + (float)steps * 0.02f;
 		resizeEllipse(*(scene_.ellipse_iter_), scale);
 	}
-
-	InvalidateRect(hwnd_, NULL, FALSE);
 }
 
 void KDrawingEngine::onMouseLeave()
 {
 	scene_.ellipse_iter_ = scene_.ellipse_list_.end();
 	scene_.draw_bounding_box_ = false;
-	InvalidateRect(hwnd_, NULL, FALSE);    
-}
-
-void KDrawingEngine::onCommand(WORD command)
-{
-	switch (command)
-	{
-	case ID_DRAW_MODE:
-		setMode(Mode::DRAW);
-		break;
-	case ID_SELECT_MODE:
-		setMode(Mode::SELECT);
-		break;
-	case ID_TOGGLE_MODE:
-		if (mode_ == Mode::DRAW)
-		{
-			setMode(Mode::SELECT);
-		}
-		else
-		{
-			setMode(Mode::DRAW);
-		}
-		break;
-	}
-
-	// Force a cursor redraw
-	{
-		POINT p;
-		GetCursorPos(&p);
-		SetCursorPos(p.x, p.y);
-	}
-	
-	// Redraw everything else.
-	InvalidateRect(hwnd_, NULL, FALSE);
-}
-
-void KDrawingEngine::setMode(Mode mode)
-{
-	mode_ = mode;
 }
 
 void KDrawingEngine::trackMouse()
@@ -258,17 +230,4 @@ void KDrawingEngine::trackMouse()
 	tme.dwFlags = TME_HOVER | TME_LEAVE;
 	tme.dwHoverTime = HOVER_DEFAULT;
 	TrackMouseEvent(&tme);
-}
-
-void KDrawingEngine::setDPIScale()
-{
-    // REWRITE: This API call is deprecated.
-    UINT dpi = GetDpiForWindow(hwnd_);
-    dpi_scale_ = static_cast<float>(dpi) / 96.f;
-}
-
-D2D1_POINT_2F KDrawingEngine::toDIP(D2D1_POINT_2L point)
-{
-    return D2D1_POINT_2F{static_cast<float>(point.x) / dpi_scale_,
-                         static_cast<float>(point.y) / dpi_scale_};
 }

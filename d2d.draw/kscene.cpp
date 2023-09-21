@@ -53,9 +53,9 @@ void drawEllipse(D2D1_ELLIPSE& ellipse,
                  ID2D1RenderTarget **rt,
                  ID2D1SolidColorBrush **brush)
 {
-	(*brush)->SetColor(D2D1::ColorF(D2D1::ColorF::LightPink));
+	(*brush)->SetColor(D2D1::ColorF(D2D1::ColorF::LightBlue, 0.5f));
 	(*rt)->FillEllipse(ellipse, *brush);
-	(*brush)->SetColor(D2D1::ColorF{D2D1::ColorF::Black});
+	(*brush)->SetColor(D2D1::ColorF{D2D1::ColorF::Black, 0.5f});
 	(*rt)->DrawEllipse(ellipse, *brush, 1.f);
-	(*brush)->SetColor(D2D1::ColorF(D2D1::ColorF::LightPink));
+	(*brush)->SetColor(D2D1::ColorF(D2D1::ColorF::LightBlue, 0.5f));
 }

@@ -3,7 +3,7 @@
 #include <memory>
 #include "kd2dsurface.h"
 
-enum class Mode {DRAW, SELECT};
+enum class Mode{Draw, Select};
 
 class KDrawingEngine : public KWindow
 {
@@ -19,18 +19,12 @@ private:
 	void onMouseMove(D2D1_POINT_2L point, WPARAM wparam);
 	void onMouseWheelMove(int wheel_data);
 	void onMouseLeave();
-	void setMode(Mode mode);
 	void trackMouse();
-    void onCommand(WORD command);
-    void setDPIScale();
-    D2D1_POINT_2F toDIP(D2D1_POINT_2L point);
     
     std::unique_ptr<KD2DSurface> surface_{};
 	KScene		  scene_;
 	D2D1_POINT_2F left_click_;
 	D2D1_POINT_2F prev_point_;
-	HACCEL		  h_accel_tab_;
 	HCURSOR		  h_cursor_;
-	Mode		  mode_{Mode::DRAW};
-    float         dpi_scale_{};
+	Mode		  mode_{Mode::Draw};
 };

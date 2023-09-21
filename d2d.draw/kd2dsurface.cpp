@@ -1,7 +1,8 @@
-#include <cassert>
-#include <cmath>
+#include <string>
 #include <random>
 #include <algorithm>
+#include <cassert>
+#include <cmath>
 #include "kd2dsurface.h"
 
 KD2DSurface::KD2DSurface(HWND hwnd, uint32_t width, uint32_t height)
@@ -57,10 +58,8 @@ void KD2DSurface::create_device_independent_resources()
 		0.0f						// The dash offset
         );
 
-	// A 'dash blank ... ' pattern where:
-	// dash is a line of length 5
+	// A 'dash blank ... ' pattern where dash is a line of length 5
 	// blank is a space of length 3
-
 	float dashes[] = {5.0f, 3.0f};    
 
     hr = d2d1_factory_->CreateStrokeStyle(
@@ -69,10 +68,13 @@ void KD2DSurface::create_device_independent_resources()
 		ARRAYSIZE(dashes),
 		&d2d1_stroke_style_);
     assert(SUCCEEDED(hr));
+
+    create_text_resources();
 }
 
 void KD2DSurface::discard_device_independent_resources()
 {
+    discard_text_resources();
     SafeRelease(&d2d1_stroke_style_);
     SafeRelease(&d2d1_factory_);
 }
@@ -148,6 +150,28 @@ void KD2DSurface::discard_device_dependent_resources()
     SafeRelease(&d3d11_device_);
 }
 
+void KD2DSurface::create_text_resources()
+{
+    DWriteCreateFactory(DWRITE_FACTORY_TYPE_SHARED,
+                        __uuidof(IDWriteFactory),
+                        reinterpret_cast<IUnknown**>(&dwrite_factory_));
+    dwrite_factory_->CreateTextFormat(L"Verdana",
+                                      NULL,
+                                      DWRITE_FONT_WEIGHT_NORMAL,
+                                      DWRITE_FONT_STYLE_NORMAL,
+                                      DWRITE_FONT_STRETCH_NORMAL,
+                                      10.0f, L"en-us",
+                                      &dwrite_text_format_);
+    dwrite_text_format_->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_LEADING);
+    dwrite_text_format_->SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_FAR);
+}
+
+void KD2DSurface::discard_text_resources()
+{
+    SafeRelease(&dwrite_text_format_);
+    SafeRelease(&dwrite_factory_);
+}
+
 void KD2DSurface::create_render_target_resources()
 {
     HRESULT hr = S_OK;
@@ -174,10 +198,13 @@ void KD2DSurface::create_render_target_resources()
 
     hr = d2d1_dxgi_surface_rt_->CreateSolidColorBrush(D2D1::ColorF(D2D1::ColorF::Black), &d2d1_brush_);
     assert(SUCCEEDED(hr));
+    hr = d2d1_dxgi_surface_rt_->CreateSolidColorBrush(D2D1::ColorF(D2D1::ColorF::Black), &d2d1_text_brush_);
+    assert(SUCCEEDED(hr));
 }
 
 void KD2DSurface::discard_render_target_resources()
 {
+    SafeRelease(&d2d1_text_brush_);
     SafeRelease(&d2d1_brush_);
     SafeRelease(&d2d1_dxgi_surface_rt_);
 }
@@ -187,13 +214,42 @@ void KD2DSurface::render(KScene& scene)
     HRESULT hr = S_OK;
 
     ///////////////////////////////////////////////////////////////////////////////////////////
+    // Define layout.
+    ///////////////////////////////////////////////////////////////////////////////////////////
+    static const float kSeparator{10.f};
+    float kTextBoxWidth{size_.width - (kSeparator + kSeparator)};
+    static const float kTextBoxHeight{50.f};
+    D2D1_POINT_2F kTextBoxPoint{kSeparator,
+                                size_.height - (kTextBoxHeight + kSeparator)};
+    const D2D1_RECT_F kTextRect{kTextBoxPoint.x,
+                                kTextBoxPoint.y,
+                                kTextBoxPoint.x + kTextBoxWidth,
+                                kTextBoxPoint.y + kTextBoxHeight};
+    ///////////////////////////////////////////////////////////////////////////////////////////
+
+    ///////////////////////////////////////////////////////////////////////////////////////////
+    // Compose the text.
+    ///////////////////////////////////////////////////////////////////////////////////////////
+    std::wstring text1{L"Current mode: " + scene.mode_text_ + L"\n"};
+    static std::wstring text2{L"Press M to toggle DRAW/SELECT mode.\n"};
+    static std::wstring text3{L"Roll mouse-wheel to resize an ellipse in SELECT mode.\n"};
+    static std::wstring text4{L"Left-click + drag mouse to move ellipse in SELECT mode.\n"};
+    static std::wstring text5{L"Left-click + drag mouse to draw ellipse in DRAW mode.\n"};
+    std::wstring text{text1 + text2 + text3 + text4 + text5};
+    ///////////////////////////////////////////////////////////////////////////////////////////
+
+    ///////////////////////////////////////////////////////////////////////////////////////////
     // Draw Direct2D content.
     ///////////////////////////////////////////////////////////////////////////////////////////
     d2d1_dxgi_surface_rt_->BeginDraw();
     d2d1_dxgi_surface_rt_->SetTransform(D2D1::Matrix3x2F::Identity());
     d2d1_dxgi_surface_rt_->Clear(D2D1::ColorF(D2D1::ColorF::FloralWhite));
     draw(scene);
-       
+    d2d1_dxgi_surface_rt_->DrawText(text.c_str(),
+                                    static_cast<UINT32>(wcslen(text.c_str())),
+                                    dwrite_text_format_,
+                                    &kTextRect,
+                                    d2d1_text_brush_);
     hr = d2d1_dxgi_surface_rt_->EndDraw();
     if (hr == D2DERR_RECREATE_TARGET)
     {

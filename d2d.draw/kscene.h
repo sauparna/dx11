@@ -1,6 +1,7 @@
 #pragma once
 
 #include <list>
+#include <string>
 #include <d2d1_2.h>
 
 // The list iterator points to an ellipse that has been selected with
@@ -22,6 +23,7 @@ public:
 	std::list<D2D1_ELLIPSE>::iterator ellipse_iter_;
 	D2D1_RECT_F bounding_box_{};
 	bool draw_bounding_box_{false};
+    std::wstring mode_text_{L"DRAW"};
 };
 
 void resizeEllipse(D2D1_ELLIPSE& ellipse, FLOAT scale);
