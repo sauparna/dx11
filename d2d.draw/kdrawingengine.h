@@ -3,7 +3,7 @@
 #include <memory>
 #include "kd2dsurface.h"
 
-enum class Mode{Draw, Select};
+enum class Mode{Draw, Edit};
 
 class KDrawingEngine : public KWindow
 {
@@ -11,6 +11,8 @@ public:
     KDrawingEngine(uint32_t surface_width, uint32_t surface_height);
     LRESULT WndProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam);
     void Run();
+    void Update();
+    void Draw();
     
 private:
     void onKeyDown(WPARAM wparam, LPARAM lparam);

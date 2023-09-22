@@ -1,15 +1,33 @@
 #include "kscene.h"
 
-KScene::KScene(uint32_t width, uint32_t height)
+KScene::KScene(D2D1_SIZE_U bounds)
     : ellipse_iter_{ellipse_list_.end()},
-      width_{width},
-      height_{height}
+      bounds_{bounds},
+      text_box_width_{bounds.width - (kSeparator + kSeparator)},
+      text_box_height_{bounds.height / 4.f}
 {
+    text_box_point_ = D2D1::Point2F(kSeparator,
+                                    bounds.height - (text_box_height_ + kSeparator));
+    text_rect_ = D2D1::RectF(text_box_point_.x,
+                             text_box_point_.y,
+                             text_box_point_.x + text_box_width_,
+                             text_box_point_.y + text_box_height_);
+}
 
+void KScene::resize(D2D1_SIZE_U bounds)
+{
+    bounds_ = bounds;
+    text_box_point_ = D2D1::Point2F(kSeparator,
+                                    bounds.height - (text_box_height_ + kSeparator));
+    text_rect_ = D2D1::RectF(text_box_point_.x,
+                             text_box_point_.y,
+                             text_box_point_.x + text_box_width_,
+                             text_box_point_.y + text_box_height_);
 }
 
 void KScene::update()
 {
+    text_ = L"Current mode: " + mode_text_ + L"\n" + kMsgText;
 }
 
 bool KScene::selectShape(D2D1_POINT_2F point)
@@ -26,13 +44,13 @@ bool KScene::selectShape(D2D1_POINT_2F point)
 	return false;
 }
 
-void resizeEllipse(D2D1_ELLIPSE& ellipse, FLOAT scale)
+void KScene::resizeEllipse(D2D1_ELLIPSE& ellipse, FLOAT scale)
 {
 	ellipse.radiusX *= scale;
 	ellipse.radiusY *= scale;
 }
 
-bool insideEllipse(D2D1_ELLIPSE& ellipse, D2D1_POINT_2F point)
+bool KScene::insideEllipse(D2D1_ELLIPSE& ellipse, D2D1_POINT_2F point)
 {
 	float rx2 = ellipse.radiusX * ellipse.radiusX;
 	float ry2 = ellipse.radiusY * ellipse.radiusY;
@@ -47,15 +65,4 @@ bool insideEllipse(D2D1_ELLIPSE& ellipse, D2D1_POINT_2F point)
 	float d = ((x * x) / rx2) + ((y * y) / ry2);
 
 	return d <= 1.f;
-}
-
-void drawEllipse(D2D1_ELLIPSE& ellipse,
-                 ID2D1RenderTarget **rt,
-                 ID2D1SolidColorBrush **brush)
-{
-	(*brush)->SetColor(D2D1::ColorF(D2D1::ColorF::LightBlue, 0.5f));
-	(*rt)->FillEllipse(ellipse, *brush);
-	(*brush)->SetColor(D2D1::ColorF{D2D1::ColorF::Black, 0.5f});
-	(*rt)->DrawEllipse(ellipse, *brush, 1.f);
-	(*brush)->SetColor(D2D1::ColorF(D2D1::ColorF::LightBlue, 0.5f));
 }

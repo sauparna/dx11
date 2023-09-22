@@ -5,9 +5,10 @@
 #include <cmath>
 #include "kd2dsurface.h"
 
-KD2DSurface::KD2DSurface(HWND hwnd, uint32_t width, uint32_t height)
+KD2DSurface::KD2DSurface(HWND hwnd, uint32_t width, uint32_t height, KScene &scene)
     : hwnd_{hwnd},
-      size_{width, height}
+      size_{width, height},
+      scene_{scene}
 {
     create_device_independent_resources();
     create_device_dependent_resources();
@@ -209,34 +210,9 @@ void KD2DSurface::discard_render_target_resources()
     SafeRelease(&d2d1_dxgi_surface_rt_);
 }
 
-void KD2DSurface::render(KScene& scene)
+void KD2DSurface::render()
 {    
     HRESULT hr = S_OK;
-
-    ///////////////////////////////////////////////////////////////////////////////////////////
-    // Define layout.
-    ///////////////////////////////////////////////////////////////////////////////////////////
-    static const float kSeparator{10.f};
-    float kTextBoxWidth{size_.width - (kSeparator + kSeparator)};
-    static const float kTextBoxHeight{50.f};
-    D2D1_POINT_2F kTextBoxPoint{kSeparator,
-                                size_.height - (kTextBoxHeight + kSeparator)};
-    const D2D1_RECT_F kTextRect{kTextBoxPoint.x,
-                                kTextBoxPoint.y,
-                                kTextBoxPoint.x + kTextBoxWidth,
-                                kTextBoxPoint.y + kTextBoxHeight};
-    ///////////////////////////////////////////////////////////////////////////////////////////
-
-    ///////////////////////////////////////////////////////////////////////////////////////////
-    // Compose the text.
-    ///////////////////////////////////////////////////////////////////////////////////////////
-    std::wstring text1{L"Current mode: " + scene.mode_text_ + L"\n"};
-    static std::wstring text2{L"Press M to toggle DRAW/SELECT mode.\n"};
-    static std::wstring text3{L"Roll mouse-wheel to resize an ellipse in SELECT mode.\n"};
-    static std::wstring text4{L"Left-click + drag mouse to move ellipse in SELECT mode.\n"};
-    static std::wstring text5{L"Left-click + drag mouse to draw ellipse in DRAW mode.\n"};
-    std::wstring text{text1 + text2 + text3 + text4 + text5};
-    ///////////////////////////////////////////////////////////////////////////////////////////
 
     ///////////////////////////////////////////////////////////////////////////////////////////
     // Draw Direct2D content.
@@ -244,12 +220,7 @@ void KD2DSurface::render(KScene& scene)
     d2d1_dxgi_surface_rt_->BeginDraw();
     d2d1_dxgi_surface_rt_->SetTransform(D2D1::Matrix3x2F::Identity());
     d2d1_dxgi_surface_rt_->Clear(D2D1::ColorF(D2D1::ColorF::FloralWhite));
-    draw(scene);
-    d2d1_dxgi_surface_rt_->DrawText(text.c_str(),
-                                    static_cast<UINT32>(wcslen(text.c_str())),
-                                    dwrite_text_format_,
-                                    &kTextRect,
-                                    d2d1_text_brush_);
+    draw();
     hr = d2d1_dxgi_surface_rt_->EndDraw();
     if (hr == D2DERR_RECREATE_TARGET)
     {
@@ -280,28 +251,42 @@ void KD2DSurface::resize()
     DXGI_SWAP_CHAIN_DESC1 scd{};
     hr = dxgi_swap_chain_->GetDesc1(&scd);
     assert(SUCCEEDED(hr));
-    size_.width = scd.Width;
-    size_.height = scd.Height;
+    size_ = D2D1::SizeU(scd.Width, scd.Height);
+    scene_.resize(size_);
 }
 
-void KD2DSurface::update(KScene& scene)
+void KD2DSurface::draw()
 {
-    scene.update();
-}
-
-void KD2DSurface::draw(KScene& scene)
-{
-	for (auto i = scene.ellipse_list_.begin(); i != scene.ellipse_list_.end(); ++i)
+    ///////////////////////////////////////////////////////////////////////////////////////////
+    // Draw geometry.
+    ///////////////////////////////////////////////////////////////////////////////////////////
+	for (auto ellipseIter = scene_.ellipse_list_.begin();
+         ellipseIter != scene_.ellipse_list_.end();
+         ++ellipseIter)
 	{
-		drawEllipse(*i, &d2d1_dxgi_surface_rt_, &d2d1_brush_);
+        d2d1_brush_->SetColor(D2D1::ColorF(D2D1::ColorF::LightBlue, 0.5f));
+        d2d1_dxgi_surface_rt_->FillEllipse(*ellipseIter, d2d1_brush_);
+        d2d1_brush_->SetColor(D2D1::ColorF{D2D1::ColorF::Black, 0.5f});
+        d2d1_dxgi_surface_rt_->DrawEllipse(*ellipseIter, d2d1_brush_, 1.f);
+        d2d1_brush_->SetColor(D2D1::ColorF(D2D1::ColorF::LightBlue, 0.5f));
 	}
-
-	if (scene.draw_bounding_box_)
+	if (scene_.draw_bounding_box_)
 	{
 		d2d1_brush_->SetColor(D2D1::ColorF{D2D1::ColorF::Gray});
-		d2d1_dxgi_surface_rt_->DrawRectangle(scene.bounding_box_, d2d1_brush_, 1.f, d2d1_stroke_style_);
+		d2d1_dxgi_surface_rt_->DrawRectangle(scene_.bounding_box_, d2d1_brush_, 1.f, d2d1_stroke_style_);
 		d2d1_brush_->SetColor(D2D1::ColorF(D2D1::ColorF::LightPink));
 	}
+    ///////////////////////////////////////////////////////////////////////////////////////////
+
+    ///////////////////////////////////////////////////////////////////////////////////////////
+    // Draw text.
+    ///////////////////////////////////////////////////////////////////////////////////////////
+    d2d1_dxgi_surface_rt_->DrawText(scene_.text_.c_str(),
+                                    static_cast<UINT32>(wcslen(scene_.text_.c_str())),
+                                    dwrite_text_format_,
+                                    &scene_.text_rect_,
+                                    d2d1_text_brush_);
+    ///////////////////////////////////////////////////////////////////////////////////////////
 }
 
 HRESULT KD2DSurface::create_d3d_device(D3D_DRIVER_TYPE const kD3DDriverType,

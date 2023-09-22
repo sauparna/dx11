@@ -11,7 +11,7 @@
 class KD2DSurface
 {
 public:
-    KD2DSurface(HWND hwnd, uint32_t width, uint32_t height);
+    KD2DSurface(HWND hwnd, uint32_t width, uint32_t height, KScene &scene);
     ~KD2DSurface();
     void create_device_independent_resources();
     void discard_device_independent_resources();
@@ -24,9 +24,8 @@ public:
     void discard_text_resources();
 
     void resize();
-    void render(KScene& scene);
-    void update(KScene& scene);
-    void draw(KScene& scene);
+    void render();
+    void draw();
     HRESULT create_d3d_device(D3D_DRIVER_TYPE const kD3DDriveType,
                               ID3D11Device1 **d3d11_device,
                               ID3D11DeviceContext1 **d3d11_device_context);
@@ -34,6 +33,7 @@ public:
     bool window_resized_{true};
 
 protected:
+    KScene &scene_;
 
     void initialize_d3d11_debug_layer(ID3D11Device1 **d3d11_device);
     

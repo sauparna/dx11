@@ -6,10 +6,10 @@ using namespace std;
 
 KDrawingEngine::KDrawingEngine(uint32_t surface_width, uint32_t surface_height)
     : KWindow{},
-      scene_{surface_width, surface_height}
+      scene_{{surface_width, surface_height}}
 {
     Initialize(surface_width, surface_height);
-    surface_ = std::make_unique<KD2DSurface>(hwnd_, surface_width, surface_height);
+    surface_ = std::make_unique<KD2DSurface>(hwnd_, surface_width, surface_height, scene_);
 }
 
 LRESULT KDrawingEngine::WndProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
@@ -54,7 +54,7 @@ LRESULT KDrawingEngine::WndProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lpara
 			case Mode::Draw:
 				h_cursor_ = LoadCursor(NULL, IDC_CROSS);
 				break;
-			case Mode::Select:
+			case Mode::Edit:
 				h_cursor_ = LoadCursor(NULL, IDC_HAND);
 				break;
 			}
@@ -96,10 +96,21 @@ void KDrawingEngine::Run()
             surface_->create_render_target_resources();
             surface_->device_lost_ = false;
         }
-
-        surface_->update(scene_);
-        surface_->render(scene_);
+        
+        Update();
+        Draw();
     }
+}
+
+void KDrawingEngine::Update()
+{
+    scene_.update();
+}
+
+void KDrawingEngine::Draw()
+{
+    if (!surface_) return;
+    surface_->render();
 }
 
 void KDrawingEngine::onKeyDown(WPARAM wparam, LPARAM)
@@ -112,8 +123,8 @@ void KDrawingEngine::onKeyDown(WPARAM wparam, LPARAM)
 	{
 		if (mode_ == Mode::Draw)
 		{
-			mode_ = Mode::Select;
-            scene_.mode_text_ = L"SELECT/MOVE/RESIZE";
+			mode_ = Mode::Edit;
+            scene_.mode_text_ = L"EDIT";
 		}
 		else
 		{
@@ -146,7 +157,7 @@ void KDrawingEngine::onLButtonDown(D2D1_POINT_2L point)
 			scene_.draw_bounding_box_ = true;
 		}
     }
-    else if (mode_ == Mode::Select)
+    else if (mode_ == Mode::Edit)
     {
 		scene_.ellipse_iter_ = scene_.ellipse_list_.end();
 		if (scene_.selectShape(fpoint))
@@ -189,7 +200,7 @@ void KDrawingEngine::onMouseMove(D2D1_POINT_2L point, WPARAM wparam)
 			scene_.bounding_box_ = D2D1_RECT_F{ left_click_.x, left_click_.y, fpoint.x, fpoint.y };
 			scene_.draw_bounding_box_ = true;
 		}
-		else if (mode_ == Mode::Select)
+		else if (mode_ == Mode::Edit)
 		{
 			// Move ellipse by the mouse-pointer movement-delta and
 			// save the new position.
@@ -212,7 +223,7 @@ void KDrawingEngine::onMouseWheelMove(int wheel_data)
 		// https://docs.microsoft.com/en-us/windows/win32/learnwin32/other-mouse-operations#mouse-wheel
 		int steps = wheel_data / 120;
 		float scale = 1.f + (float)steps * 0.02f;
-		resizeEllipse(*(scene_.ellipse_iter_), scale);
+		scene_.resizeEllipse(*(scene_.ellipse_iter_), scale);
 	}
 }
 
