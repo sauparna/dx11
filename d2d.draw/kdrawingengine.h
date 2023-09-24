@@ -12,6 +12,7 @@ public:
     LRESULT WndProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam);
     void Run();
     void Update();
+    void Resize();
     void Draw();
     
 private:
@@ -24,7 +25,8 @@ private:
 	void trackMouse();
     
     std::unique_ptr<KD2DSurface> surface_{};
-	KScene		  scene_;
+	KGeometry	  geometry_;
+    KTextOverlay  textOverlay;
 	D2D1_POINT_2F left_click_;
 	D2D1_POINT_2F prev_point_;
 	HCURSOR		  h_cursor_;

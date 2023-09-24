@@ -5,10 +5,15 @@
 #include <cmath>
 #include "kd2dsurface.h"
 
-KD2DSurface::KD2DSurface(HWND hwnd, uint32_t width, uint32_t height, KScene &scene)
+KD2DSurface::KD2DSurface(HWND hwnd,
+                         uint32_t width,
+                         uint32_t height,
+                         KGeometry &geometry,
+                         KTextOverlay &textOverlay)
     : hwnd_{hwnd},
       size_{width, height},
-      scene_{scene}
+      geometry_{geometry},
+      textOverlay{textOverlay}
 {
     create_device_independent_resources();
     create_device_dependent_resources();
@@ -192,8 +197,8 @@ void KD2DSurface::create_render_target_resources()
                                      96.0f,
                                      96.0f);
     hr = d2d1_factory_->CreateDxgiSurfaceRenderTarget(dxgi_surface,
-                                                     &d2d1_render_target_properties,
-                                                     &d2d1_dxgi_surface_rt_);
+                                                      &d2d1_render_target_properties,
+                                                      &d2d1_dxgi_surface_rt_);
     assert(SUCCEEDED(hr));
     SafeRelease(&dxgi_surface);
 
@@ -252,7 +257,8 @@ void KD2DSurface::resize()
     hr = dxgi_swap_chain_->GetDesc1(&scd);
     assert(SUCCEEDED(hr));
     size_ = D2D1::SizeU(scd.Width, scd.Height);
-    scene_.resize(size_);
+    geometry_.resize(size_);
+    textOverlay.Resize(size_);
 }
 
 void KD2DSurface::draw()
@@ -260,8 +266,8 @@ void KD2DSurface::draw()
     ///////////////////////////////////////////////////////////////////////////////////////////
     // Draw geometry.
     ///////////////////////////////////////////////////////////////////////////////////////////
-	for (auto ellipseIter = scene_.ellipse_list_.begin();
-         ellipseIter != scene_.ellipse_list_.end();
+	for (auto ellipseIter = geometry_.ellipse_list_.begin();
+         ellipseIter != geometry_.ellipse_list_.end();
          ++ellipseIter)
 	{
         d2d1_brush_->SetColor(D2D1::ColorF(D2D1::ColorF::LightBlue, 0.5f));
@@ -270,10 +276,10 @@ void KD2DSurface::draw()
         d2d1_dxgi_surface_rt_->DrawEllipse(*ellipseIter, d2d1_brush_, 1.f);
         d2d1_brush_->SetColor(D2D1::ColorF(D2D1::ColorF::LightBlue, 0.5f));
 	}
-	if (scene_.draw_bounding_box_)
+	if (geometry_.draw_bounding_box_)
 	{
 		d2d1_brush_->SetColor(D2D1::ColorF{D2D1::ColorF::Gray});
-		d2d1_dxgi_surface_rt_->DrawRectangle(scene_.bounding_box_, d2d1_brush_, 1.f, d2d1_stroke_style_);
+		d2d1_dxgi_surface_rt_->DrawRectangle(geometry_.bounding_box_, d2d1_brush_, 1.f, d2d1_stroke_style_);
 		d2d1_brush_->SetColor(D2D1::ColorF(D2D1::ColorF::LightPink));
 	}
     ///////////////////////////////////////////////////////////////////////////////////////////
@@ -281,10 +287,10 @@ void KD2DSurface::draw()
     ///////////////////////////////////////////////////////////////////////////////////////////
     // Draw text.
     ///////////////////////////////////////////////////////////////////////////////////////////
-    d2d1_dxgi_surface_rt_->DrawText(scene_.text_.c_str(),
-                                    static_cast<UINT32>(wcslen(scene_.text_.c_str())),
+    d2d1_dxgi_surface_rt_->DrawText(textOverlay.text.c_str(),
+                                    static_cast<UINT32>(wcslen(textOverlay.text.c_str())),
                                     dwrite_text_format_,
-                                    &scene_.text_rect_,
+                                    &textOverlay.rect,
                                     d2d1_text_brush_);
     ///////////////////////////////////////////////////////////////////////////////////////////
 }

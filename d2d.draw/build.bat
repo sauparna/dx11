@@ -9,6 +9,6 @@ REM set COMPILER_FLAGS=%COMMON_COMPILER_FLAGS% %RELEASE_FLAGS%
 set LINKER_FLAGS=/INCREMENTAL:NO /opt:ref
 set SYSTEM_LIBS=kernel32.lib user32.lib gdi32.lib winmm.lib ole32.lib d2d1.lib dxgi.lib d3d11.lib dwrite.lib
 set LOCAL_LIBS=kwindow.lib
-set SRC=kdraw.cpp kd2dsurface.cpp kdrawingengine.cpp kscene.cpp
+set SRC=kdraw.cpp kd2dsurface.cpp kdrawingengine.cpp kgeometry.cpp ktextoverlay.cpp
 cl %COMPILER_FLAGS% %SRC% /link %LINKER_FLAGS% %SYSTEM_LIBS% %LOCAL_LIBS%
 echo Done

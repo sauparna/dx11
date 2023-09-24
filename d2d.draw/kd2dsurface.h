@@ -6,12 +6,17 @@
 #include <d3d11_1.h>
 #include <dwrite.h>
 
-#include "kscene.h"
+#include "kgeometry.h"
+#include "ktextoverlay.h"
 
 class KD2DSurface
 {
 public:
-    KD2DSurface(HWND hwnd, uint32_t width, uint32_t height, KScene &scene);
+    KD2DSurface(HWND hwnd,
+                uint32_t width,
+                uint32_t height,
+                KGeometry &geometry,
+                KTextOverlay &textOverlay);
     ~KD2DSurface();
     void create_device_independent_resources();
     void discard_device_independent_resources();
@@ -33,7 +38,8 @@ public:
     bool window_resized_{true};
 
 protected:
-    KScene &scene_;
+    KGeometry &geometry_;
+    KTextOverlay &textOverlay;
 
     void initialize_d3d11_debug_layer(ID3D11Device1 **d3d11_device);
     

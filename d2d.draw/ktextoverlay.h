@@ -1,38 +1,22 @@
 #pragma once
 
-#include <list>
 #include <string>
 #include <d2d1_2.h>
 
-// The list iterator points to an ellipse that has been selected with
-// a mouse-click on it. The iterator points to ellipseList_.end() to
-// indicate absence of any selection. The top-most ellipse on the
-// drawing surface is the last element in the list.
-
-class KScene
+class KTextOverlay
 {
 public:
 
-	KScene(D2D1_SIZE_U bounds);
-    void resize(D2D1_SIZE_U bounds);
-    void update();
+    KTextOverlay(D2D1_SIZE_U bounds);
+    ~KTextOverlay();
+    void Update();
+    void Resize(D2D1_SIZE_U newBounds);
 
-	bool selectShape(D2D1_POINT_2F point);
-    void resizeEllipse(D2D1_ELLIPSE& ellipse, FLOAT scale);
-
-	std::list<D2D1_ELLIPSE> ellipse_list_;
-	std::list<D2D1_ELLIPSE>::iterator ellipse_iter_;
-	D2D1_RECT_F bounding_box_{};
-	bool draw_bounding_box_{false};
-
-    std::wstring text_{};
-    D2D1_RECT_F text_rect_{0.f, 0.f, 1.f, 1.f};
-    
-    std::wstring mode_text_{L"DRAW"};
+    std::wstring text{};
+    D2D1_RECT_F rect{0.f, 0.f, 1.f, 1.f};
+    std::wstring modeText{L"DRAW"};
 
 private:
-
-    bool insideEllipse(D2D1_ELLIPSE& ellipse, D2D1_POINT_2F point);
     
     ///////////////////////////////////////////////////////////////////////////////////////////
     // Text constants.
@@ -47,10 +31,10 @@ private:
     // Text layout variables.
     ///////////////////////////////////////////////////////////////////////////////////////////
     const float kSeparator{10.f};
-    float text_box_width_{1.f};
-    float text_box_height_{1.f};
-    D2D1_POINT_2F text_box_point_{0.f, 0.f};
+    float boxWidth{1.f};
+    float boxHeight{1.f};
+    D2D1_POINT_2F boxTopLeftPoint{0.f, 0.f};
     ///////////////////////////////////////////////////////////////////////////////////////////
 
-    D2D1_SIZE_U bounds_{1, 1};
+    D2D1_SIZE_U bounds{1, 1};
 };
