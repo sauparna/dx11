@@ -47,7 +47,8 @@ protected:
     ID3D11DeviceContext1* d3d11_device_context_{};
     IDXGISwapChain1 *dxgi_swap_chain_{};
     ID2D1Factory2 *d2d1_factory_{};
-    ID2D1RenderTarget *d2d1_dxgi_surface_rt_{};
+    ID2D1DeviceContext *d2d1_device_context_{};
+    ID2D1Bitmap1 *d2d1_bitmap_{};
     ID2D1SolidColorBrush *d2d1_brush_{};
     ID2D1StrokeStyle *d2d1_stroke_style_{};
     

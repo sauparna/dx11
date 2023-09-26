@@ -92,18 +92,17 @@ void KD2DSurface::create_device_dependent_resources()
     ///////////////////////////////////////////////////////////////////////////////////////////
     // Create the D3D device.
     ///////////////////////////////////////////////////////////////////////////////////////////
-
     hr = create_d3d_device(D3D_DRIVER_TYPE_HARDWARE, &d3d11_device_, &d3d11_device_context_);
     if (hr == DXGI_ERROR_UNSUPPORTED)
     {
         hr = create_d3d_device(D3D_DRIVER_TYPE_WARP, &d3d11_device_, &d3d11_device_context_);
     }
     assert(SUCCEEDED(hr));
+    ///////////////////////////////////////////////////////////////////////////////////////////
 
     ///////////////////////////////////////////////////////////////////////////////////////////
     // Create the DXGI swap chain.
     ///////////////////////////////////////////////////////////////////////////////////////////
-
     IDXGIFactory2 *dxgi_factory{};
     IDXGIDevice1 *dxgi_device{};
     {
@@ -114,7 +113,6 @@ void KD2DSurface::create_device_dependent_resources()
         IDXGIAdapter *dxgi_adapter{};
         hr = dxgi_device->GetAdapter(&dxgi_adapter);
         assert(SUCCEEDED(hr));
-        SafeRelease(&dxgi_device);
 
         DXGI_ADAPTER_DESC adapter_desc;
         dxgi_adapter->GetDesc(&adapter_desc);
@@ -148,10 +146,27 @@ void KD2DSurface::create_device_dependent_resources()
                                               &dxgi_swap_chain_);
     assert(SUCCEEDED(hr));
     SafeRelease(&dxgi_factory);
+    ///////////////////////////////////////////////////////////////////////////////////////////
+
+    ///////////////////////////////////////////////////////////////////////////////////////////
+    // Create the Direct2D device-context.
+    ///////////////////////////////////////////////////////////////////////////////////////////
+    ID2D1Device1 *d2d1_device{};
+    hr = d2d1_factory_->CreateDevice(dxgi_device, &d2d1_device);
+    assert(SUCCEEDED(hr));
+    SafeRelease(&dxgi_device);
+
+    hr =  d2d1_device->CreateDeviceContext(D2D1_DEVICE_CONTEXT_OPTIONS_NONE,
+                                           &d2d1_device_context_);
+    assert(SUCCEEDED(hr));
+    SafeRelease(&d2d1_device);
+    ///////////////////////////////////////////////////////////////////////////////////////////
 }
 
 void KD2DSurface::discard_device_dependent_resources()
 {
+    SafeRelease(&d2d1_bitmap_);
+    SafeRelease(&d2d1_device_context_);
     SafeRelease(&dxgi_swap_chain_);
     SafeRelease(&d3d11_device_);
 }
@@ -182,37 +197,44 @@ void KD2DSurface::create_render_target_resources()
 {
     HRESULT hr = S_OK;
 
+    ///////////////////////////////////////////////////////////////////////////////////////////
+    // Create a render target.
+    ///////////////////////////////////////////////////////////////////////////////////////////
     IDXGISurface *dxgi_surface{};
-
-    ///////////////////////////////////////////////////////////////////////////////////////////
-    // Create a render target and related resources.
-    ///////////////////////////////////////////////////////////////////////////////////////////
-
     hr = dxgi_swap_chain_->GetBuffer(0, IID_PPV_ARGS(&dxgi_surface));
     assert(SUCCEEDED(hr));
-    D2D1_RENDER_TARGET_PROPERTIES d2d1_render_target_properties =
-        D2D1::RenderTargetProperties(D2D1_RENDER_TARGET_TYPE_DEFAULT,
-                                     D2D1::PixelFormat(DXGI_FORMAT_UNKNOWN,
-                                                       D2D1_ALPHA_MODE_PREMULTIPLIED),
-                                     96.0f,
-                                     96.0f);
-    hr = d2d1_factory_->CreateDxgiSurfaceRenderTarget(dxgi_surface,
-                                                      &d2d1_render_target_properties,
-                                                      &d2d1_dxgi_surface_rt_);
+
+    D2D1_BITMAP_PROPERTIES1 bp = D2D1::BitmapProperties1(
+        D2D1_BITMAP_OPTIONS_TARGET | D2D1_BITMAP_OPTIONS_CANNOT_DRAW,
+        D2D1::PixelFormat(DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_IGNORE),
+        96.0f,
+        96.0f);
+    hr = d2d1_device_context_->CreateBitmapFromDxgiSurface(dxgi_surface,
+                                                           &bp,
+                                                           &d2d1_bitmap_);
     assert(SUCCEEDED(hr));
     SafeRelease(&dxgi_surface);
-
-    hr = d2d1_dxgi_surface_rt_->CreateSolidColorBrush(D2D1::ColorF(D2D1::ColorF::Black), &d2d1_brush_);
+    d2d1_device_context_->SetTarget(d2d1_bitmap_);
+    ///////////////////////////////////////////////////////////////////////////////////////////
+    
+    ///////////////////////////////////////////////////////////////////////////////////////////
+    // Create the rest of the resources related to the render target.
+    ///////////////////////////////////////////////////////////////////////////////////////////
+    hr = d2d1_device_context_->CreateSolidColorBrush(D2D1::ColorF(D2D1::ColorF::Black),
+                                                     &d2d1_brush_);
     assert(SUCCEEDED(hr));
-    hr = d2d1_dxgi_surface_rt_->CreateSolidColorBrush(D2D1::ColorF(D2D1::ColorF::Black), &d2d1_text_brush_);
+    hr = d2d1_device_context_->CreateSolidColorBrush(D2D1::ColorF(D2D1::ColorF::Black),
+                                                     &d2d1_text_brush_);
     assert(SUCCEEDED(hr));
+    ///////////////////////////////////////////////////////////////////////////////////////////
 }
 
 void KD2DSurface::discard_render_target_resources()
 {
     SafeRelease(&d2d1_text_brush_);
     SafeRelease(&d2d1_brush_);
-    SafeRelease(&d2d1_dxgi_surface_rt_);
+    SafeRelease(&d2d1_bitmap_);
+    d2d1_device_context_->SetTarget(nullptr);
 }
 
 void KD2DSurface::render()
@@ -222,11 +244,9 @@ void KD2DSurface::render()
     ///////////////////////////////////////////////////////////////////////////////////////////
     // Draw Direct2D content.
     ///////////////////////////////////////////////////////////////////////////////////////////
-    d2d1_dxgi_surface_rt_->BeginDraw();
-    d2d1_dxgi_surface_rt_->SetTransform(D2D1::Matrix3x2F::Identity());
-    d2d1_dxgi_surface_rt_->Clear(D2D1::ColorF(D2D1::ColorF::FloralWhite));
+    d2d1_device_context_->BeginDraw();
     draw();
-    hr = d2d1_dxgi_surface_rt_->EndDraw();
+    hr = d2d1_device_context_->EndDraw();
     if (hr == D2DERR_RECREATE_TARGET)
     {
         discard_device_dependent_resources();
@@ -264,6 +284,13 @@ void KD2DSurface::resize()
 void KD2DSurface::draw()
 {
     ///////////////////////////////////////////////////////////////////////////////////////////
+    // Initialize.
+    ///////////////////////////////////////////////////////////////////////////////////////////
+    d2d1_device_context_->SetTransform(D2D1::Matrix3x2F::Identity());
+    d2d1_device_context_->Clear(D2D1::ColorF(D2D1::ColorF::FloralWhite));
+    ///////////////////////////////////////////////////////////////////////////////////////////
+
+    ///////////////////////////////////////////////////////////////////////////////////////////
     // Draw geometry.
     ///////////////////////////////////////////////////////////////////////////////////////////
 	for (auto ellipseIter = geometry_.ellipse_list_.begin();
@@ -271,15 +298,15 @@ void KD2DSurface::draw()
          ++ellipseIter)
 	{
         d2d1_brush_->SetColor(D2D1::ColorF(D2D1::ColorF::LightBlue, 0.5f));
-        d2d1_dxgi_surface_rt_->FillEllipse(*ellipseIter, d2d1_brush_);
+        d2d1_device_context_->FillEllipse(*ellipseIter, d2d1_brush_);
         d2d1_brush_->SetColor(D2D1::ColorF{D2D1::ColorF::Black, 0.5f});
-        d2d1_dxgi_surface_rt_->DrawEllipse(*ellipseIter, d2d1_brush_, 1.f);
+        d2d1_device_context_->DrawEllipse(*ellipseIter, d2d1_brush_, 1.f);
         d2d1_brush_->SetColor(D2D1::ColorF(D2D1::ColorF::LightBlue, 0.5f));
 	}
 	if (geometry_.draw_bounding_box_)
 	{
 		d2d1_brush_->SetColor(D2D1::ColorF{D2D1::ColorF::Gray});
-		d2d1_dxgi_surface_rt_->DrawRectangle(geometry_.bounding_box_, d2d1_brush_, 1.f, d2d1_stroke_style_);
+		d2d1_device_context_->DrawRectangle(geometry_.bounding_box_, d2d1_brush_, 1.f, d2d1_stroke_style_);
 		d2d1_brush_->SetColor(D2D1::ColorF(D2D1::ColorF::LightPink));
 	}
     ///////////////////////////////////////////////////////////////////////////////////////////
@@ -287,7 +314,7 @@ void KD2DSurface::draw()
     ///////////////////////////////////////////////////////////////////////////////////////////
     // Draw text.
     ///////////////////////////////////////////////////////////////////////////////////////////
-    d2d1_dxgi_surface_rt_->DrawText(textOverlay.text.c_str(),
+    d2d1_device_context_->DrawText(textOverlay.text.c_str(),
                                     static_cast<UINT32>(wcslen(textOverlay.text.c_str())),
                                     dwrite_text_format_,
                                     &textOverlay.rect,
