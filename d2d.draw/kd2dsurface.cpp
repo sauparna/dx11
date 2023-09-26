@@ -249,7 +249,6 @@ void KD2DSurface::render()
     hr = d2d1_device_context_->EndDraw();
     if (hr == D2DERR_RECREATE_TARGET)
     {
-        discard_device_dependent_resources();
         device_lost_ = true;
         return;
     }
@@ -259,7 +258,6 @@ void KD2DSurface::render()
     hr = dxgi_swap_chain_->Present(1, 0);
     if (hr == DXGI_ERROR_DEVICE_REMOVED || hr == DXGI_ERROR_DEVICE_RESET)
     {
-        discard_device_dependent_resources();
         device_lost_ = true;
         return;
     }
