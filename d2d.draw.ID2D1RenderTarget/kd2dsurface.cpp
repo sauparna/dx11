@@ -239,7 +239,6 @@ void KD2DSurface::render()
     hr = dxgi_swap_chain_->Present(1, 0);
     if (hr == DXGI_ERROR_DEVICE_REMOVED || hr == DXGI_ERROR_DEVICE_RESET)
     {
-        discard_device_dependent_resources();
         device_lost_ = true;
         return;
     }
